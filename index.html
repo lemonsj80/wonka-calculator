@@ -282,8 +282,9 @@ canvas{display:none}
         <button class="cat-btn" onclick="setCalcCat('화과자')">🌸 화과자</button>
         <button class="cat-btn" onclick="setCalcCat('양갱')">🟣 양갱</button>
       </div>
-      <div style="margin-bottom:12px">
-        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee">
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee;flex:1">
+        <button id="calc-sort-btn" class="btn btn-sm" onclick="toggleCalcSort()" style="white-space:nowrap">가나다 ↑</button>
       </div>
       <div id="calc-menu-list" style="margin-bottom:12px"></div>
       <div id="calc-content" style="display:none">
@@ -326,6 +327,13 @@ let calcCat = '전체';
 let ingCat = '전체';
 let ingSort = false;   // false=기본순, true=가나다순
 let menuSort = false;
+let calcSort = false;
+
+function toggleCalcSort(){
+  calcSort=!calcSort;
+  document.getElementById('calc-sort-btn').textContent=calcSort?'가나다 ↓':'가나다 ↑';
+  renderCalcMenus();
+}
 
 function toggleInlineIngForm(id){
   const form=document.getElementById('ing-inline-form-'+id);
@@ -779,7 +787,8 @@ function renderCalcMenus(){
   const el=document.getElementById('calc-menu-list');
   const q=(document.getElementById('calc-search')?.value||'').toLowerCase();
   const catFiltered=calcCat==='전체'?menus:menus.filter(m=>(m.category||'떡')===calcCat);
-  const list=catFiltered.filter(m=>m.name.toLowerCase().includes(q));
+  let list=catFiltered.filter(m=>m.name.toLowerCase().includes(q));
+  if(calcSort) list=[...list].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   if(!menus.length){el.innerHTML='<div class="empty">메뉴 관리 탭에서 먼저 메뉴를 등록해주세요.</div>';return;}
   if(!list.length){el.innerHTML='<div class="empty">🔍 검색 결과가 없어요.</div>';return;}
   el.innerHTML=list.map(m=>`
