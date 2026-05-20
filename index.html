@@ -293,12 +293,12 @@ canvas{display:none}
       <div id="calc-menu-list" style="margin-bottom:12px"></div>
       <div id="calc-content" style="display:none">
         <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-sm" onclick="closeCalcContent()">← 목록</button>
-              <div style="font-size:15px;font-weight:700" id="calc-title"></div>
-            </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <button class="btn btn-sm" onclick="exportImage()">⬇ 이미지 저장</button>
+            <button class="btn btn-sm" onclick="closeCalcContent()">⬅ 목록</button>
+          </div>
+          <div style="background:#f9f9f7;border-radius:10px;padding:12px;text-align:center;margin-bottom:12px">
+            <div id="calc-title" style="font-size:17px;font-weight:700;color:#1a1a1a"></div>
           </div>
           <div id="calc-summary"></div>
           <div class="divider"></div>
@@ -307,8 +307,8 @@ canvas{display:none}
           <div class="grid-auto" id="calc-stats"></div>
           <div id="calc-actual" style="display:none"></div>
           <div id="calc-suggest"></div>
-          <div id="calc-excel-btn" style="display:none;margin-top:12px">
-            <button class="btn" style="width:100%;padding:12px;font-size:14px;font-weight:600;background:#f0fff4;border-color:#0f6e56;color:#0f6e56" onclick="exportExcel()">📊 엑셀로 저장하기</button>
+          <div id="calc-excel-btn" style="display:none;margin-top:12px;text-align:right">
+            <button class="btn btn-sm" onclick="exportExcel()">📊 엑셀 저장</button>
           </div>
         </div>
       </div>
