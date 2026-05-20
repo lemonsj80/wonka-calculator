@@ -287,7 +287,7 @@ canvas{display:none}
         <button class="cat-btn" onclick="setCalcCat('양갱')">🟣 양갱</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
-        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee;flex:1">
+        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="onCalcSearch()" style="background:#f9f9f7;border-color:#eee;flex:1">
         <button id="calc-sort-btn" class="btn btn-sm" onclick="toggleCalcSort()" style="white-space:nowrap">가나다 ↑</button>
       </div>
       <div id="calc-menu-list" style="margin-bottom:12px"></div>
@@ -659,6 +659,10 @@ function setMenuCat(cat){
 function setCalcCat(cat){
   calcCat=cat;
   document.querySelectorAll('#tab-calculator .cat-btn').forEach(b=>b.classList.toggle('active',b.textContent.includes(cat)||(cat==='전체'&&b.textContent==='전체')));
+  // 결과 화면이 열려있으면 목록으로 돌아가기
+  if(document.getElementById('calc-content').style.display!=='none'){
+    closeCalcContent();
+  }
   renderCalcMenus();
 }
 
@@ -870,10 +874,20 @@ function renderCalcMenus(){
     </div>`).join('');
 }
 
+function onCalcSearch(){
+  // 결과 화면이 열려있으면 목록으로 돌아가기
+  if(document.getElementById('calc-content').style.display!=='none'){
+    document.getElementById('calc-content').style.display='none';
+    document.getElementById('calc-menu-list').style.display='block';
+    selMenuId=null;
+  }
+  renderCalcMenus();
+}
+
 function closeCalcContent(){
   document.getElementById('calc-content').style.display='none';
   document.getElementById('calc-menu-list').style.display='block';
-  document.getElementById('calc-search').parentElement.style.display='block';
+  document.getElementById('calc-search').value='';
   selMenuId=null;
   renderCalcMenus();
 }
@@ -884,7 +898,6 @@ function selectMenu(id){
   document.getElementById('calc-count').dataset.val=menu.default_count||0;
   document.getElementById('calc-price').dataset.val=menu.default_price||0;
   document.getElementById('calc-menu-list').style.display='none';
-  document.getElementById('calc-search').parentElement.style.display='none';
   document.getElementById('calc-content').style.display='block';
   document.getElementById('calc-title').textContent=menu.name;
   renderCalcSummary(menu);
