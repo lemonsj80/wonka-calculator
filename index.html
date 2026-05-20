@@ -368,6 +368,22 @@ async function saveInlineMenu(id){
   const default_price=parseFloat(document.getElementById('menu-edit-price-'+id).value)||0;
   if(!name){alert('메뉴명을 입력해주세요.');return;}
   await sb.from('menus').update({name,category,default_count,default_price}).eq('id',id);
+  // 재료 분량 업데이트
+  const menu=menus.find(m=>m.id===id);
+  if(menu){
+    const validRecipe=menu.recipe.filter(r=>ingredients.find(i=>i.id===r.ingId));
+    for(let ri=0;ri<validRecipe.length;ri++){
+      const qtyEl=document.getElementById('menu-edit-qty-'+id+'-'+ri);
+      const ingIdEl=document.getElementById('menu-edit-ingid-'+id+'-'+ri);
+      if(qtyEl&&ingIdEl){
+        const qty=parseFloat(qtyEl.value);
+        const ingId=parseInt(ingIdEl.value);
+        if(!isNaN(qty)&&qty>0){
+          await sb.from('menu_recipes').update({qty}).eq('menu_id',id).eq('ingredient_id',ingId);
+        }
+      }
+    }
+  }
   await loadMenus();
 }
 
@@ -739,10 +755,18 @@ function renderMenus(){
   el.innerHTML=filtered.map(m=>{
     const isMine=m.created_by===currentUser.id;
     const catOpts=['떡','한과','퓨전','화과자','양갱'].map(c=>`<option value="${c}" ${(m.category||'떡')===c?'selected':''}>${catEmoji[c]||''} ${c}</option>`).join('');
-    const recipeRows=m.recipe.map(r=>{
+    const recipeRows=m.recipe.map((r,ri)=>{
       const ing=ingredients.find(i=>i.id===r.ingId);
-      return ing?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#555"><span>${ing.name}</span><span>${r.qty}${ing.unit}</span></div>`:'';
+      if(!ing) return '';
+      return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="flex:2;font-size:13px;color:#555">${ing.name}</span>
+        <input type="number" id="menu-edit-qty-${m.id}-${ri}" value="${r.qty}" min="0" step="any"
+          style="width:80px;padding:5px 8px;font-size:13px;border:1px solid #e0e0de;border-radius:6px">
+        <span style="font-size:12px;color:#888;min-width:20px">${ing.unit}</span>
+        <input type="hidden" id="menu-edit-ingid-${m.id}-${ri}" value="${r.ingId}">
+      </div>`;
     }).join('');
+    const recipeCount=m.recipe.filter(r=>ingredients.find(i=>i.id===r.ingId)).length;
     return `<div class="menu-item" id="menu-item-${m.id}" style="flex-direction:column;align-items:stretch;cursor:default">
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-weight:600;flex:1">${m.name}</span>
@@ -765,7 +789,7 @@ function renderMenus(){
         </div>
         <div style="font-size:12px;font-weight:600;color:#888;margin-bottom:8px">사용 재료</div>
         <div id="menu-edit-rows-${m.id}">${recipeRows}</div>
-        <div style="font-size:12px;color:#aaa;margin-bottom:8px">※ 재료 상세 수정은 메뉴 추가 버튼에서 삭제 후 재등록해주세요</div>
+
         <div class="form-row">
           <div class="form-group">
             <label>기본 생산 개수</label>
