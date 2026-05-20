@@ -47,7 +47,9 @@ input:focus,select:focus{border-color:#1a1a1a}
 .recipe-row select{flex:2.5;min-width:120px}
 .recipe-row input{flex:1;min-width:60px}
 .recipe-row .unit{font-size:12px;color:#888;min-width:28px}
-.total-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:14px}
+.total-row{display:grid;grid-template-columns:1fr 90px 100px;align-items:center;padding:7px 0;font-size:14px;gap:8px}
+.total-row span:nth-child(2){text-align:right;color:#555}
+.total-row span:nth-child(3){text-align:right}
 .total-row.bold{font-weight:600;font-size:15px}
 .badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600}
 .badge-blue{background:#e6f1fb;color:#185fa5}
@@ -139,8 +141,23 @@ canvas{display:none}
         <span class="section-title">재료 목록 <span style="font-size:11px;color:#aaa;font-weight:400">(공용)</span></span>
         <button class="btn btn-primary btn-sm" onclick="toggleIngForm()">+ 재료 추가</button>
       </div>
-      <div style="margin-bottom:12px">
-        <input id="ing-search" type="text" placeholder="🔍  재료 검색..." oninput="renderIngredients()" style="background:#f9f9f7;border-color:#eee">
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap" id="ing-cat-btns">
+        <button class="cat-btn active" onclick="setIngCat('전체')">전체</button>
+        <button class="cat-btn" onclick="setIngCat('가루')">🌾 가루</button>
+        <button class="cat-btn" onclick="setIngCat('곡류')">🌾 곡류</button>
+        <button class="cat-btn" onclick="setIngCat('당류')">🍯 당류</button>
+        <button class="cat-btn" onclick="setIngCat('견과/씨앗')">🥜 견과/씨앗</button>
+        <button class="cat-btn" onclick="setIngCat('유지')">🧈 유지</button>
+        <button class="cat-btn" onclick="setIngCat('오일')">🫙 오일</button>
+        <button class="cat-btn" onclick="setIngCat('앙금류')">🟤 앙금류</button>
+        <button class="cat-btn" onclick="setIngCat('과일/채소')">🥦 과일/채소</button>
+        <button class="cat-btn" onclick="setIngCat('한약재/향신료')">🌿 향신료</button>
+        <button class="cat-btn" onclick="setIngCat('포장재')">📦 포장재</button>
+        <button class="cat-btn" onclick="setIngCat('기타')">📌 기타</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+        <input id="ing-search" type="text" placeholder="🔍  재료 검색..." oninput="renderIngredients()" style="background:#f9f9f7;border-color:#eee;flex:1">
+        <button id="ing-sort-btn" class="btn btn-sm" onclick="toggleIngSort()" style="white-space:nowrap">가나다 ↑</button>
       </div>
       <div id="ing-form" style="display:none" class="card">
         <div id="ing-form-title" style="font-size:14px;font-weight:600;margin-bottom:12px">새 재료 등록</div>
@@ -189,6 +206,12 @@ canvas{display:none}
         <button class="cat-btn" onclick="setMenuCat('떡')">🍡 떡</button>
         <button class="cat-btn" onclick="setMenuCat('한과')">🍯 한과</button>
         <button class="cat-btn" onclick="setMenuCat('퓨전')">✨ 퓨전</button>
+        <button class="cat-btn" onclick="setMenuCat('화과자')">🌸 화과자</button>
+        <button class="cat-btn" onclick="setMenuCat('양갱')">🟣 양갱</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+        <input id="menu-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderMenus()" style="background:#f9f9f7;border-color:#eee;flex:1">
+        <button id="menu-sort-btn" class="btn btn-sm" onclick="toggleMenuSort()" style="white-space:nowrap">가나다 ↑</button>
       </div>
       <div id="menu-form" style="display:none" class="card">
         <div style="font-size:14px;font-weight:600;margin-bottom:12px" id="menu-form-title">새 메뉴 등록</div>
@@ -203,6 +226,8 @@ canvas{display:none}
               <option value="떡">🍡 떡</option>
               <option value="한과">🍯 한과</option>
               <option value="퓨전">✨ 퓨전</option>
+              <option value="화과자">🌸 화과자</option>
+              <option value="양갱">🟣 양갱</option>
             </select>
           </div>
         </div>
@@ -231,38 +256,40 @@ canvas{display:none}
 
     <!-- 원가 계산 -->
     <div id="tab-calculator" class="panel">
-      <div class="section-header"><span class="section-title">메뉴 선택</span></div>
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
         <button class="cat-btn active" onclick="setCalcCat('전체')">전체</button>
         <button class="cat-btn" onclick="setCalcCat('떡')">🍡 떡</button>
         <button class="cat-btn" onclick="setCalcCat('한과')">🍯 한과</button>
         <button class="cat-btn" onclick="setCalcCat('퓨전')">✨ 퓨전</button>
+        <button class="cat-btn" onclick="setCalcCat('화과자')">🌸 화과자</button>
+        <button class="cat-btn" onclick="setCalcCat('양갱')">🟣 양갱</button>
       </div>
-      <div style="margin-bottom:12px">
-        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee">
-      </div>
-      <div id="calc-menu-list" style="margin-bottom:12px"></div>
-      <div id="calc-content" style="display:none">
-        <div class="card">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div style="font-size:15px;font-weight:700" id="calc-title"></div>
-            <button class="btn btn-sm" onclick="exportImage()">⬇ 이미지 저장</button>
-          </div>
-          <div id="calc-summary"></div>
-          <div class="divider"></div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>생산 개수</label>
-              <input id="calc-count" type="number" placeholder="예: 1.5" min="0.1" step="0.1" oninput="recalc()">
+      <div style="display:flex;gap:16px;align-items:flex-start">
+        <!-- 왼쪽: 메뉴 목록 -->
+        <div style="width:220px;flex-shrink:0">
+          <input id="calc-search" type="text" placeholder="🔍 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee;margin-bottom:8px;font-size:13px">
+          <div id="calc-menu-list" style="max-height:600px;overflow-y:auto"></div>
+        </div>
+        <!-- 오른쪽: 결과 -->
+        <div style="flex:1;min-width:0">
+          <div id="calc-content" style="display:none">
+            <div class="card">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <div style="font-size:15px;font-weight:700" id="calc-title"></div>
+                <button class="btn btn-sm" onclick="exportImage()">⬇ 이미지 저장</button>
+              </div>
+              <div id="calc-summary"></div>
+              <div class="divider"></div>
+              <div id="calc-count" style="display:none"></div>
+              <div id="calc-price" style="display:none"></div>
+              <div class="grid-auto" id="calc-stats"></div>
+              <div id="calc-suggest"></div>
+              <div id="calc-actual" style="display:none"></div>
             </div>
-            <div class="form-group">
-              <label>실제 판매가 (원/개)</label>
-              <input id="calc-price" type="number" placeholder="직접 입력" oninput="recalc()">
-            </div>
           </div>
-          <div class="grid-auto" id="calc-stats"></div>
-          <div id="calc-suggest"></div>
-          <div id="calc-actual" style="display:none"></div>
+          <div id="calc-empty" style="color:#aaa;font-size:14px;text-align:center;padding:60px 0">
+            👈 왼쪽에서 메뉴를 선택해주세요
+          </div>
         </div>
       </div>
     </div>
@@ -284,6 +311,32 @@ let editMenuId = null;
 let selMenuId = null;
 let menuCat = '전체';
 let calcCat = '전체';
+let ingCat = '전체';
+let ingSort = false;   // false=기본순, true=가나다순
+let menuSort = false;
+
+function toggleIngSort(){
+  ingSort=!ingSort;
+  document.getElementById('ing-sort-btn').textContent=ingSort?'가나다 ↓':'가나다 ↑';
+  renderIngredients();
+}
+function toggleMenuSort(){
+  menuSort=!menuSort;
+  document.getElementById('menu-sort-btn').textContent=menuSort?'가나다 ↓':'가나다 ↑';
+  renderMenus();
+}
+
+const ING_CAT_MAP = {"찹쌀 가루": "가루", "찹쌀가루": "가루", "멥쌀가루": "가루", "중력분": "가루", "코코아 가루": "가루", "흑임자 가루": "가루", "흑임자가루": "가루", "흑임자 고물": "가루", "콩가루": "가루", "찐 콩가루": "가루", "볶은 콩가루": "가루", "찰흑미가루": "가루", "녹두전분": "가루", "분당": "당류", "슈가파우더": "가루", "아몬드 가루": "가루", "서리태 가루": "가루", "승검초 가루": "가루", "말차 가루": "가루", "황치즈 가루": "가루", "시나몬가루": "가루", "콩고물": "가루", "거피팥 고물": "가루", "팥고물": "가루", "땅콩분태": "가루", "땅콩 분태": "가루", "다진호박씨": "가루", "찹 쌀": "곡류", "현미": "곡류", "찜쌀백": "곡류", "쌀꼬부리": "곡류", "백설탕": "당류", "설탕": "당류", "설 탕": "당류", "흑설탕": "당류", "유기농 설탕": "당류", "비정제원당": "당류", "꿀": "당류", "조청": "당류", "조 청": "당류", "물엿": "당류", "물 엿": "당류", "올리고당": "당류", "유자청": "당류", "유자청 건지": "당류", "유자차 건지": "당류", "유자퓨레": "당류", "생강청": "당류", "통아몬드": "견과/씨앗", "아몬드": "견과/씨앗", "호두 (10개)": "견과/씨앗", "호 두": "견과/씨앗", "호두분태": "견과/씨앗", "호두강정": "견과/씨앗", "잣": "견과/씨앗", "잣 (15개)": "견과/씨앗", "호박씨": "견과/씨앗", "피스타치오": "견과/씨앗", "크랜베리": "견과/씨앗", "피 칸": "견과/씨앗", "캐슈넛": "견과/씨앗", "검정깨": "견과/씨앗", "참 깨": "견과/씨앗", "실 깨": "견과/씨앗", "들 깨": "견과/씨앗", "서리태": "견과/씨앗", "땅콩 (미국)": "견과/씨앗", "깐 밤": "견과/씨앗", "밤": "견과/씨앗", "삼색콩배기": "견과/씨앗", "완두배기": "견과/씨앗", "아몬드 강정": "견과/씨앗", "버 터": "유지", "버터": "유지", "무염버터": "유지", "생크림": "유지", "크림치즈": "유지", "참기름": "오일", "고운팥앙금": "앙금류", "춘설앙금": "앙금류", "찐 단호박": "과일/채소", "반건조무화과": "과일/채소", "올리브": "과일/채소", "곶 감": "과일/채소", "호박고지": "과일/채소", "대 추": "한약재/향신료", "대추": "한약재/향신료", "인삼(소) 1채": "한약재/향신료", "인 삼": "한약재/향신료", "깐생강": "한약재/향신료", "생강즙": "한약재/향신료", "생 강": "한약재/향신료", "통계피": "한약재/향신료", "건미삼": "한약재/향신료", "마른홍고추": "한약재/향신료", "다시마": "한약재/향신료", "통후추": "한약재/향신료", "오미자": "한약재/향신료", "봉 투": "포장재", "용기": "포장재", "케이스": "포장재", "상자": "포장재", "나무상자": "포장재", "나무도시락(대)": "포장재", "떡비닐": "포장재", "페트컵": "포장재", "실링봉투": "포장재", "낱개봉투": "포장재", "오동나무케이스": "포장재"};
+
+function getIngCatName(name){
+  return ING_CAT_MAP[name] || '기타';
+}
+
+function setIngCat(cat){
+  ingCat=cat;
+  document.querySelectorAll('#ing-cat-btns .cat-btn').forEach(b=>b.classList.toggle('active',b.textContent.includes(cat)||(cat==='전체'&&b.textContent==='전체')));
+  renderIngredients();
+}
 
 // ── 로그인/회원가입 ──
 function showRegister(){
@@ -406,21 +459,46 @@ async function deleteIngredient(id){
 function renderIngredients(){
   const el=document.getElementById('ingredient-list');
   const q=(document.getElementById('ing-search')?.value||'').toLowerCase();
-  const list=ingredients.filter(i=>i.name.toLowerCase().includes(q));
+  let list=ingredients.filter(i=>i.name.toLowerCase().includes(q)&&(ingCat==='전체'||getIngCatName(i.name)===ingCat));
+  if(ingSort) list=[...list].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   if(!ingredients.length){el.innerHTML='<div class="empty">📦 등록된 재료가 없어요.<br>재료 추가 버튼을 눌러보세요!</div>';return;}
   if(!list.length){el.innerHTML='<div class="empty">🔍 검색 결과가 없어요.</div>';return;}
-  el.innerHTML=list.map(i=>{
-    const up=(i.buy_price/i.buy_qty).toFixed(2);
-    const isMine=i.created_by===currentUser.id;
-    return `<div class="ingredient-item">
-      <span class="name">${i.name}</span>
-      <span class="info">${i.buy_qty.toLocaleString()}${i.unit} / ${i.buy_price.toLocaleString()}원
-        <span class="badge badge-blue" style="margin-left:4px">${up}원/${i.unit}</span>
-      </span>
-      <button class="btn btn-sm" onclick="toggleIngForm(${i.id})" style="margin-right:4px">수정</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteIngredient(${i.id})">삭제</button>
-    </div>`;
-  }).join('');
+  // 카테고리별 그룹핑
+  const catsOrder=['가루','곡류','당류','견과/씨앗','유지','오일','앙금류','과일/채소','한약재/향신료','포장재','기타'];
+  const catEmoji={'가루':'🌾','곡류':'🌾','당류':'🍯','견과/씨앗':'🥜','유지':'🧈','오일':'🫙','앙금류':'🟤','과일/채소':'🥦','한약재/향신료':'🌿','포장재':'📦','기타':'📌'};
+  if(ingCat!=='전체'){
+    el.innerHTML=list.map(i=>{
+      const up=(i.buy_price/i.buy_qty).toFixed(2);
+      return `<div class="ingredient-item">
+        <span class="name">${i.name}</span>
+        <span class="info">${i.buy_qty.toLocaleString()}${i.unit} / ${i.buy_price.toLocaleString()}원
+          <span class="badge badge-blue" style="margin-left:4px">${up}원/${i.unit}</span>
+        </span>
+        <button class="btn btn-sm" onclick="toggleIngForm(${i.id})" style="margin-right:4px">수정</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteIngredient(${i.id})">삭제</button>
+      </div>`;
+    }).join('');
+  } else {
+    const catMap={};
+    list.forEach(i=>{const c=getIngCatName(i.name);if(!catMap[c])catMap[c]=[];catMap[c].push(i);});
+    let html='';
+    catsOrder.forEach(cat=>{
+      if(!catMap[cat]||!catMap[cat].length)return;
+      html+=`<div style="font-size:12px;font-weight:600;color:#888;margin:12px 0 6px">${catEmoji[cat]} ${cat}</div>`;
+      html+=catMap[cat].map(i=>{
+        const up=(i.buy_price/i.buy_qty).toFixed(2);
+        return `<div class="ingredient-item">
+          <span class="name">${i.name}</span>
+          <span class="info">${i.buy_qty.toLocaleString()}${i.unit} / ${i.buy_price.toLocaleString()}원
+            <span class="badge badge-blue" style="margin-left:4px">${up}원/${i.unit}</span>
+          </span>
+          <button class="btn btn-sm" onclick="toggleIngForm(${i.id})" style="margin-right:4px">수정</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteIngredient(${i.id})">삭제</button>
+        </div>`;
+      }).join('');
+    });
+    el.innerHTML=html;
+  }
 }
 
 // ── 메뉴 관리 ──
@@ -452,20 +530,73 @@ function openMenuForm(id){
 
 function closeMenuForm(){document.getElementById('menu-form').style.display='none';}
 
+function buildIngOpts(filterText, selectedId){
+  const catsOrder=['가루','곡류','당류','견과/씨앗','유지','오일','앙금류','과일/채소','한약재/향신료','포장재','기타'];
+  const catMap={};
+  ingredients.forEach(i=>{
+    if(filterText && !i.name.toLowerCase().includes(filterText.toLowerCase())) return;
+    const cat=getIngCatName(i.name);
+    if(!catMap[cat]) catMap[cat]=[];
+    catMap[cat].push(i);
+  });
+  let opts='';
+  catsOrder.forEach(cat=>{
+    if(!catMap[cat]||!catMap[cat].length) return;
+    opts+=`<optgroup label="${cat}">`;
+    catMap[cat].forEach(i=>{
+      opts+=`<option value="${i.id}" ${i.id==selectedId?'selected':''}>${i.name} (${i.unit})</option>`;
+    });
+    opts+='</optgroup>';
+  });
+  return opts || '<option value="">검색 결과 없음</option>';
+}
+
 function addRecipeRow(existing){
   const row=document.createElement('div');row.className='recipe-row';
-  const opts=ingredients.map(i=>`<option value="${i.id}" ${existing&&existing.ingId===i.id?'selected':''}>${i.name} (${i.unit})</option>`).join('');
+  const existingIngId = existing?existing.ingId:null;
   const unit=existing?getIngUnit(existing.ingId):ingredients[0]?.unit||'';
+  const uid='row_'+Date.now()+'_'+Math.random().toString(36).slice(2);
   row.innerHTML=`
-    <select onchange="updateRowUnit(this)">${opts||'<option>재료를 먼저 등록하세요</option>'}</select>
-    <input type="number" placeholder="분량" min="0" step="any" value="${existing?existing.qty:''}">
-    <span class="unit">${unit}</span>
+    <div style="flex:2;min-width:120px;position:relative">
+      <input type="text" class="recipe-ing-search" placeholder="🔍 재료 검색..." autocomplete="off"
+        style="width:100%;padding:7px 10px;font-size:13px;border:1px solid #e0e0de;border-radius:8px;background:#fff"
+        oninput="filterIngSelect(this)"
+        onfocus="this.nextElementSibling.style.display='block'"
+        onblur="setTimeout(()=>{this.nextElementSibling.style.display='none'},200)"
+        value="${existing?ingredients.find(i=>i.id===existingIngId)?.name||'':''}"
+      >
+      <select class="recipe-ing-select" size="6"
+        style="display:none;position:absolute;top:100%;left:0;width:100%;z-index:100;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:200px;overflow-y:auto;font-size:13px"
+        onchange="selectIngFromDropdown(this)"
+      >${buildIngOpts('', existingIngId)}</select>
+    </div>
+    <input type="number" placeholder="분량" min="0" step="any" value="${existing?existing.qty:''}" style="flex:1;min-width:60px">
+    <span class="unit" style="font-size:12px;color:#888;min-width:28px">${unit}</span>
+    <input type="hidden" class="recipe-ing-id" value="${existingIngId||''}">
     <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>`;
   document.getElementById('recipe-rows').appendChild(row);
 }
 
+function filterIngSelect(input){
+  const select=input.nextElementSibling;
+  select.style.display='block';
+  const q=input.value;
+  select.innerHTML=buildIngOpts(q, null);
+}
+
+function selectIngFromDropdown(select){
+  const row=select.closest('.recipe-row');
+  const ingId=parseInt(select.value);
+  const ing=ingredients.find(i=>i.id===ingId);
+  if(!ing)return;
+  row.querySelector('.recipe-ing-search').value=ing.name;
+  row.querySelector('.recipe-ing-id').value=ingId;
+  row.querySelector('.unit').textContent=ing.unit;
+  select.style.display='none';
+}
+
 function getIngUnit(id){const i=ingredients.find(x=>x.id==id);return i?i.unit:'';}
-function updateRowUnit(sel){sel.parentElement.querySelector('.unit').textContent=getIngUnit(parseInt(sel.value));}
+function updateRowUnit(sel){sel.closest('.recipe-row').querySelector('.unit').textContent=getIngUnit(parseInt(sel.value));}
 
 async function saveMenu(){
   const name=document.getElementById('menu-name').value.trim();
@@ -476,8 +607,10 @@ async function saveMenu(){
   const rows=document.querySelectorAll('#recipe-rows .recipe-row');
   const recipe=[];
   rows.forEach(row=>{
-    const ingId=parseInt(row.querySelector('select').value);
-    const qty=parseFloat(row.querySelector('input').value);
+    const hiddenId=row.querySelector('.recipe-ing-id');
+    const ingId=hiddenId?parseInt(hiddenId.value):parseInt(row.querySelector('select')?.value);
+    const qtyInput=row.querySelectorAll('input[type="number"]')[0];
+    const qty=parseFloat(qtyInput?.value);
     if(ingId&&!isNaN(qty)&&qty>0) recipe.push({ingId,qty});
   });
   if(!recipe.length){alert('재료를 하나 이상 추가해주세요.');return;}
@@ -510,8 +643,11 @@ function menuCost(menu){
 
 function renderMenus(){
   const el=document.getElementById('menu-list');
-  const catEmoji={'떡':'🍡','한과':'🍯','퓨전':'✨'};
-  const filtered=menuCat==='전체'?menus:menus.filter(m=>(m.category||'떡')===menuCat);
+  const catEmoji={'떡':'🍡','한과':'🍯','퓨전':'✨','화과자':'🌸','양갱':'🟣'};
+  const mq=(document.getElementById('menu-search')?.value||'').toLowerCase();
+  let filtered=menuCat==='전체'?menus:menus.filter(m=>(m.category||'떡')===menuCat);
+  if(mq) filtered=filtered.filter(m=>m.name.toLowerCase().includes(mq));
+  if(menuSort) filtered=[...filtered].sort((a,b)=>a.name.localeCompare(b.name,'ko'));
   if(!menus.length){el.innerHTML='<div class="empty">📋 등록된 메뉴가 없어요.</div>';return;}
   if(!filtered.length){el.innerHTML='<div class="empty">이 카테고리에 메뉴가 없어요.</div>';return;}
   el.innerHTML=filtered.map(m=>{
@@ -545,9 +681,10 @@ function renderCalcMenus(){
 function selectMenu(id){
   selMenuId=id;
   const menu=menus.find(m=>m.id===id);if(!menu)return;
-  document.getElementById('calc-count').value=menu.default_count||'';
-  document.getElementById('calc-price').value=menu.default_price||'';
+  document.getElementById('calc-count').dataset.val=menu.default_count||0;
+  document.getElementById('calc-price').dataset.val=menu.default_price||0;
   document.getElementById('calc-content').style.display='block';
+  document.getElementById('calc-empty').style.display='none';
   document.getElementById('calc-title').textContent=menu.name;
   renderCalcSummary(menu);
   renderCalcMenus();
@@ -570,8 +707,8 @@ function renderCalcSummary(menu){
 function recalc(){
   const menu=menus.find(m=>m.id===selMenuId);if(!menu)return;
   const total=menuCost(menu);
-  const count=parseFloat(document.getElementById('calc-count').value)||0;
-  const price=parseFloat(document.getElementById('calc-price').value)||0;
+  const count=parseFloat(document.getElementById('calc-count').dataset.val)||0;
+  const price=parseFloat(document.getElementById('calc-price').dataset.val)||0;
   const perCost=count>0?total/count:0;
   document.getElementById('calc-stats').innerHTML=`
     <div class="stat-card"><div class="stat-label">총 원재료비</div><div class="stat-value blue">${Math.round(total).toLocaleString()}원</div></div>
@@ -592,8 +729,8 @@ function recalc(){
     act.innerHTML=`<div class="result-block"><div class="result-title">실제 판매가 분석 — ${price.toLocaleString()}원/개</div>
       <div class="grid2">
         <div class="stat-card"><div class="stat-label">실제 원가율</div><div class="stat-value ${parseFloat(cr)<=25?'green':'amber'}">${cr}%</div></div>
-        <div class="stat-card"><div class="stat-label">개당 순이익</div><div class="stat-value ${pf>=0?'green':'red'}">${pf>=0?'+':''}${pf.toLocaleString()}원</div></div>
-        <div class="stat-card"><div class="stat-label">총 순이익 (${count}개)</div><div class="stat-value ${pf*count>=0?'green':'red'}">${pf*count>=0?'+':''}${(pf*count).toLocaleString()}원</div></div>
+        <div class="stat-card"><div class="stat-label">개당 순이익</div><div class="stat-value ${pf>=0?'green':'red'}">${pf.toLocaleString()}원</div></div>
+        <div class="stat-card"><div class="stat-label">총 순이익 (${count}개)</div><div class="stat-value ${pf*count>=0?'green':'red'}">${(pf*count).toLocaleString()}원</div></div>
         <div class="stat-card"><div class="stat-label">총 매출</div><div class="stat-value blue">${(price*count).toLocaleString()}원</div></div>
       </div></div>`;
   } else act.style.display='none';
@@ -602,8 +739,8 @@ function recalc(){
 function exportImage(){
   const menu=menus.find(m=>m.id===selMenuId);if(!menu)return;
   const total=menuCost(menu);
-  const count=parseFloat(document.getElementById('calc-count').value)||0;
-  const price=parseFloat(document.getElementById('calc-price').value)||0;
+  const count=parseFloat(document.getElementById('calc-count').dataset.val)||0;
+  const price=parseFloat(document.getElementById('calc-price').dataset.val)||0;
   const perCost=count>0?total/count:0;
   const rows=(menu.recipe||[]).filter(r=>ingredients.find(i=>i.id===r.ingId));
   const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
@@ -650,11 +787,10 @@ function exportImage(){
     ctx.fillStyle=parseFloat(cr)<=25?'#0f6e56':'#854f0b';ctx.fillText(cr+'%',460,y);
     y+=30;const pf=price-Math.round(perCost);
     ctx.fillStyle='#555';ctx.fillText('개당 순이익',pad+12,y);
-    ctx.fillStyle=pf>=0?'#0f6e56':'#a32d2d';ctx.fillText((pf>=0?'+':'')+pf.toLocaleString()+'원',460,y);
+    ctx.fillStyle=pf>=0?'#0f6e56':'#a32d2d';ctx.fillText(pf.toLocaleString()+'원',460,y);
     y+=30;ctx.fillStyle='#555';ctx.fillText('총 순이익 ('+count+'개)',pad+12,y);
-    const tp=pf*count;ctx.fillStyle=tp>=0?'#0f6e56':'#a32d2d';ctx.fillText((tp>=0?'+':'')+tp.toLocaleString()+'원',460,y);
+    const tp=pf*count;ctx.fillStyle=tp>=0?'#0f6e56':'#a32d2d';ctx.fillText(tp.toLocaleString()+'원',460,y);
   }
-  y+=36;ctx.font='400 11px system-ui';ctx.fillStyle='#ddd';ctx.fillText(new Date().toLocaleString('ko-KR'),pad,y);
   const a=document.createElement('a');a.download=menu.name+'_원가계산서.png';a.href=cv.toDataURL('image/png');a.click();
 }
 
