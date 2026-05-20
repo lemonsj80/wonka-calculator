@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>원가 계산기</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Noto Sans KR',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+.header{background:#fff;border-bottom:1px solid #e5e5e3;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.header-left{display:flex;align-items:center;gap:12px}
+.header h1{font-size:17px;font-weight:700;letter-spacing:-.3px}
+.user-badge{font-size:12px;color:#888;background:#f0f0ee;padding:3px 10px;border-radius:20px}
+.container{max-width:720px;margin:0 auto;padding:24px 16px}
+.tabs{display:flex;gap:0;background:#fff;border-radius:12px;border:1px solid #e5e5e3;padding:4px;margin-bottom:20px}
+.tab{flex:1;padding:9px 12px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;color:#888;border-radius:9px;transition:all .15s;text-align:center}
+.tab.active{background:#1a1a1a;color:#fff}
+.panel{display:none}.panel.active{display:block}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:15px;font-weight:600}
+.btn{padding:8px 16px;font-size:13px;font-weight:500;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;cursor:pointer;transition:all .15s}
+.btn:hover{background:#f5f5f3}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover{background:#333}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-danger{color:#a32d2d;border-color:#f7c1c1}
+.btn-danger:hover{background:#fff5f5}
+.card{background:#fff;border:1px solid #e5e5e3;border-radius:12px;padding:16px 20px;margin-bottom:12px}
+.form-row{display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:80px}
+.form-group label{font-size:12px;color:#888;font-weight:500}
+input,select{width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0de;border-radius:8px;background:#fff;color:#1a1a1a;outline:none;transition:border .15s}
+input:focus,select:focus{border-color:#1a1a1a}
+.ingredient-item{display:flex;align-items:center;gap:8px;padding:11px 14px;background:#f9f9f7;border-radius:10px;font-size:13px;margin-bottom:8px;flex-wrap:wrap}
+.ingredient-item .name{font-weight:600;flex:1.5;min-width:80px}
+.ingredient-item .info{color:#888;flex:2;font-size:12px}
+.menu-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f9f9f7;border-radius:10px;font-size:13px;cursor:pointer;transition:all .15s;margin-bottom:8px;border:1px solid transparent}
+.menu-item:hover{background:#fff;border-color:#ddd}
+.menu-item.selected{background:#fff;border-color:#1a1a1a}
+.stat-card{background:#f9f9f7;border-radius:10px;padding:14px;text-align:center}
+.stat-label{font-size:11px;color:#888;margin-bottom:4px;font-weight:500}
+.stat-value{font-size:20px;font-weight:600}
+.green{color:#0f6e56}.blue{color:#185fa5}.amber{color:#854f0b}.red{color:#a32d2d}
+.divider{border:none;border-top:1px solid #f0f0ee;margin:14px 0}
+.recipe-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.recipe-row select{flex:2.5;min-width:120px}
+.recipe-row input{flex:1;min-width:60px}
+.recipe-row .unit{font-size:12px;color:#888;min-width:28px}
+.total-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;font-size:14px}
+.total-row.bold{font-weight:600;font-size:15px}
+.badge{display:inline-block;padding:2px 7px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-blue{background:#e6f1fb;color:#185fa5}
+.empty{text-align:center;padding:32px;color:#aaa;font-size:14px;line-height:1.8}
+.cat-btn{padding:7px 14px;font-size:13px;font-weight:500;border:1px solid #e5e5e3;border-radius:20px;background:#fff;color:#888;cursor:pointer;transition:all .15s}
+.cat-btn.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.cat-btn:hover:not(.active){background:#f5f5f3}
+.result-block{background:#f9f9f7;border-radius:12px;padding:16px;margin-top:12px}
+.result-title{font-size:12px;color:#888;margin-bottom:10px;font-weight:600;letter-spacing:.5px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:10px}
+.mine-badge{font-size:10px;background:#e6f1fb;color:#185fa5;padding:2px 6px;border-radius:10px;font-weight:600}
+.others-badge{font-size:10px;background:#f0f0ee;color:#888;padding:2px 6px;border-radius:10px}
+.lock-icon{font-size:11px;color:#bbb}
+/* 로그인 화면 */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f3}
+.login-card{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:360px;border:1px solid #e5e5e3}
+.login-title{font-size:22px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:13px;color:#888;margin-bottom:28px}
+.login-group{margin-bottom:14px}
+.login-group label{display:block;font-size:12px;font-weight:600;color:#888;margin-bottom:6px}
+.login-error{color:#a32d2d;font-size:12px;margin-top:8px;display:none}
+/* 로딩 */
+.loading{text-align:center;padding:20px;color:#aaa;font-size:13px}
+@media(max-width:480px){.grid3{grid-template-columns:1fr 1fr}.form-row{flex-direction:column}}
+canvas{display:none}
+</style>
+</head>
+<body>
+
+<!-- 로그인 화면 -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-title">🧮 원가 계산기</div>
+    <div class="login-sub">이름과 비밀번호를 입력해주세요</div>
+    <div class="login-group">
+      <label>이름</label>
+      <input id="login-name" type="text" placeholder="예: 김대표" autocomplete="username">
+    </div>
+    <div class="login-group">
+      <label>비밀번호</label>
+      <input id="login-pw" type="password" placeholder="비밀번호 입력" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div id="login-error" class="login-error">이름 또는 비밀번호가 맞지 않아요.</div>
+    <button class="btn btn-primary" style="width:100%;margin-top:8px;padding:12px" onclick="login()">로그인</button>
+    <div style="text-align:center;margin-top:16px">
+      <button class="btn btn-sm" onclick="showRegister()" style="border:none;color:#888;background:transparent;font-size:12px">처음 사용하세요? 계정 만들기</button>
+    </div>
+    <!-- 회원가입 -->
+    <div id="register-form" style="display:none;margin-top:20px;border-top:1px solid #f0f0ee;padding-top:20px">
+      <div style="font-size:13px;font-weight:600;margin-bottom:12px">새 계정 만들기</div>
+      <div class="login-group">
+        <label>이름</label>
+        <input id="reg-name" type="text" placeholder="예: 김대표">
+      </div>
+      <div class="login-group">
+        <label>비밀번호</label>
+        <input id="reg-pw" type="password" placeholder="비밀번호 설정">
+      </div>
+      <div id="reg-error" style="color:#a32d2d;font-size:12px;margin-bottom:8px;display:none"></div>
+      <button class="btn btn-primary" style="width:100%;padding:11px" onclick="register()">계정 만들기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 메인 앱 -->
+<div id="main-app" style="display:none">
+  <div class="header">
+    <div class="header-left">
+      <h1>🧮 원가 계산기</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="user-badge" id="user-display"></span>
+      <button class="btn btn-sm" onclick="logout()">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('ingredients')">📦 재료 관리</button>
+      <button class="tab" onclick="showTab('menus')">📋 메뉴 관리</button>
+      <button class="tab" onclick="showTab('calculator')">💰 원가 계산</button>
+    </div>
+
+    <!-- 재료 관리 -->
+    <div id="tab-ingredients" class="panel active">
+      <div class="section-header">
+        <span class="section-title">재료 목록 <span style="font-size:11px;color:#aaa;font-weight:400">(공용)</span></span>
+        <button class="btn btn-primary btn-sm" onclick="toggleIngForm()">+ 재료 추가</button>
+      </div>
+      <div style="margin-bottom:12px">
+        <input id="ing-search" type="text" placeholder="🔍  재료 검색..." oninput="renderIngredients()" style="background:#f9f9f7;border-color:#eee">
+      </div>
+      <div id="ing-form" style="display:none" class="card">
+        <div id="ing-form-title" style="font-size:14px;font-weight:600;margin-bottom:12px">새 재료 등록</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>재료명</label>
+            <input id="ing-name" type="text" placeholder="예: 찹쌀가루">
+          </div>
+          <div class="form-group">
+            <label>단위</label>
+            <select id="ing-unit">
+              <option value="g">g</option><option value="kg">kg</option>
+              <option value="ml">ml</option><option value="L">L</option>
+              <option value="개">개</option><option value="장">장</option>
+              <option value="봉">봉</option><option value="컵">컵</option>
+              <option value="T">T (큰술)</option><option value="t">t (작은술)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>구매 수량</label>
+            <input id="ing-qty" type="number" placeholder="500" min="0" step="any">
+          </div>
+          <div class="form-group">
+            <label>구매 금액 (원)</label>
+            <input id="ing-price" type="number" placeholder="3500" min="0">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="toggleIngForm()">취소</button>
+          <button class="btn btn-primary btn-sm" onclick="saveIngredient()">저장</button>
+        </div>
+      </div>
+      <div id="ingredient-list"></div>
+    </div>
+
+    <!-- 메뉴 관리 -->
+    <div id="tab-menus" class="panel">
+      <div class="section-header">
+        <span class="section-title">메뉴 목록</span>
+        <button class="btn btn-primary btn-sm" onclick="openMenuForm()">+ 메뉴 추가</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="cat-btn active" onclick="setMenuCat('전체')">전체</button>
+        <button class="cat-btn" onclick="setMenuCat('떡')">🍡 떡</button>
+        <button class="cat-btn" onclick="setMenuCat('한과')">🍯 한과</button>
+        <button class="cat-btn" onclick="setMenuCat('퓨전')">✨ 퓨전</button>
+      </div>
+      <div id="menu-form" style="display:none" class="card">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px" id="menu-form-title">새 메뉴 등록</div>
+        <div class="form-row">
+          <div class="form-group" style="flex:2">
+            <label>메뉴명</label>
+            <input id="menu-name" type="text" placeholder="예: 쑥 인절미">
+          </div>
+          <div class="form-group">
+            <label>카테고리</label>
+            <select id="menu-category">
+              <option value="떡">🍡 떡</option>
+              <option value="한과">🍯 한과</option>
+              <option value="퓨전">✨ 퓨전</option>
+            </select>
+          </div>
+        </div>
+        <div style="font-size:12px;font-weight:600;color:#888;margin-bottom:8px">사용 재료</div>
+        <div id="recipe-rows"></div>
+        <button class="btn btn-sm" onclick="addRecipeRow()" style="margin-bottom:16px">+ 재료 추가</button>
+        <div style="height:1px;background:#f0f0ee;margin-bottom:14px"></div>
+        <div style="font-size:12px;font-weight:600;color:#888;margin-bottom:8px">기본 설정 <span style="font-weight:400;color:#bbb">(원가 계산 시 자동 입력)</span></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>기본 생산 개수</label>
+            <input id="menu-count" type="number" placeholder="예: 12" min="0.1" step="0.1">
+          </div>
+          <div class="form-group">
+            <label>실제 판매가 (원/개)</label>
+            <input id="menu-price" type="number" placeholder="예: 3500" min="0">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-sm" onclick="closeMenuForm()">취소</button>
+          <button class="btn btn-primary btn-sm" onclick="saveMenu()">저장</button>
+        </div>
+      </div>
+      <div id="menu-list"></div>
+    </div>
+
+    <!-- 원가 계산 -->
+    <div id="tab-calculator" class="panel">
+      <div class="section-header"><span class="section-title">메뉴 선택</span></div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="cat-btn active" onclick="setCalcCat('전체')">전체</button>
+        <button class="cat-btn" onclick="setCalcCat('떡')">🍡 떡</button>
+        <button class="cat-btn" onclick="setCalcCat('한과')">🍯 한과</button>
+        <button class="cat-btn" onclick="setCalcCat('퓨전')">✨ 퓨전</button>
+      </div>
+      <div style="margin-bottom:12px">
+        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee">
+      </div>
+      <div id="calc-menu-list" style="margin-bottom:12px"></div>
+      <div id="calc-content" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:15px;font-weight:700" id="calc-title"></div>
+            <button class="btn btn-sm" onclick="exportImage()">⬇ 이미지 저장</button>
+          </div>
+          <div id="calc-summary"></div>
+          <div class="divider"></div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>생산 개수</label>
+              <input id="calc-count" type="number" placeholder="예: 1.5" min="0.1" step="0.1" oninput="recalc()">
+            </div>
+            <div class="form-group">
+              <label>실제 판매가 (원/개)</label>
+              <input id="calc-price" type="number" placeholder="직접 입력" oninput="recalc()">
+            </div>
+          </div>
+          <div class="grid-auto" id="calc-stats"></div>
+          <div id="calc-suggest"></div>
+          <div id="calc-actual" style="display:none"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<canvas id="cv"></canvas>
+
+<script>
+const SUPABASE_URL = 'https://zctbwjipncpjmmtiwjtj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_4PrVRrE5FulSCCmGXoDtIA_YPKP5w88';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let ingredients = [];
+let menus = [];
+let editIngId = null;
+let editMenuId = null;
+let selMenuId = null;
+let menuCat = '전체';
+let calcCat = '전체';
+
+// ── 로그인/회원가입 ──
+function showRegister(){
+  const f=document.getElementById('register-form');
+  f.style.display=f.style.display==='none'?'block':'none';
+}
+
+async function login(){
+  const name=document.getElementById('login-name').value.trim();
+  const pw=document.getElementById('login-pw').value;
+  if(!name||!pw){showError('login-error','이름과 비밀번호를 입력해주세요.');return;}
+  const {data,error}=await sb.from('users').select('*').eq('name',name).eq('password',pw).single();
+  if(error||!data){showError('login-error','이름 또는 비밀번호가 맞지 않아요.');return;}
+  currentUser=data;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  document.getElementById('user-display').textContent='👤 '+currentUser.name;
+  await loadAll();
+}
+
+async function register(){
+  const name=document.getElementById('reg-name').value.trim();
+  const pw=document.getElementById('reg-pw').value;
+  if(!name||!pw){showError('reg-error','이름과 비밀번호를 입력해주세요.');return;}
+  const {data:exist}=await sb.from('users').select('id').eq('name',name).single();
+  if(exist){showError('reg-error','이미 사용 중인 이름이에요.');return;}
+  const {error}=await sb.from('users').insert({name,password:pw});
+  if(error){showError('reg-error','계정 생성 실패: '+error.message);return;}
+  alert('계정이 만들어졌어요! 로그인해주세요 😊');
+  document.getElementById('register-form').style.display='none';
+  document.getElementById('login-name').value=name;
+}
+
+function logout(){
+  currentUser=null;ingredients=[];menus=[];
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('login-name').value='';
+  document.getElementById('login-pw').value='';
+}
+
+function showError(id,msg){
+  const el=document.getElementById(id);el.textContent=msg;el.style.display='block';
+  setTimeout(()=>el.style.display='none',3000);
+}
+
+// ── 데이터 로드 ──
+async function loadAll(){
+  await loadIngredients();
+  await loadMenus();
+}
+
+async function loadIngredients(){
+  const {data}=await sb.from('ingredients').select('*').order('created_at');
+  ingredients=data||[];
+  renderIngredients();
+}
+
+async function loadMenus(){
+  const {data}=await sb.from('menus').select('*, menu_recipes(*, ingredients(*))').order('created_at');
+  menus=(data||[]).map(m=>({
+    ...m,
+    recipe:(m.menu_recipes||[]).map(r=>({ingId:r.ingredient_id,qty:r.qty,ing:r.ingredients}))
+  }));
+  renderMenus();
+}
+
+// ── 탭 ──
+function showTab(name){
+  ['ingredients','menus','calculator'].forEach((n,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',n===name);
+    document.getElementById('tab-'+n).classList.toggle('active',n===name);
+  });
+  if(name==='calculator') renderCalcMenus();
+}
+
+// ── 재료 관리 ──
+function toggleIngForm(id){
+  editIngId=id||null;
+  const f=document.getElementById('ing-form');
+  const show=f.style.display==='none';
+  f.style.display=show?'block':'none';
+  if(show&&id){
+    const i=ingredients.find(x=>x.id===id);
+    document.getElementById('ing-form-title').textContent='재료 수정';
+    document.getElementById('ing-name').value=i.name;
+    document.getElementById('ing-unit').value=i.unit;
+    document.getElementById('ing-qty').value=i.buy_qty;
+    document.getElementById('ing-price').value=i.buy_price;
+  } else if(show){
+    document.getElementById('ing-form-title').textContent='새 재료 등록';
+    ['ing-name','ing-qty','ing-price'].forEach(x=>document.getElementById(x).value='');
+  } else {
+    editIngId=null;
+    document.getElementById('ing-form-title').textContent='새 재료 등록';
+  }
+}
+
+async function saveIngredient(){
+  const name=document.getElementById('ing-name').value.trim();
+  const unit=document.getElementById('ing-unit').value;
+  const qty=parseFloat(document.getElementById('ing-qty').value);
+  const price=parseFloat(document.getElementById('ing-price').value);
+  if(!name||isNaN(qty)||isNaN(price)||qty<=0||price<=0){alert('모든 항목을 입력해주세요.');return;}
+  if(editIngId){
+    await sb.from('ingredients').update({name,unit,buy_qty:qty,buy_price:price}).eq('id',editIngId);
+  } else {
+    await sb.from('ingredients').insert({name,unit,buy_qty:qty,buy_price:price,created_by:currentUser.id});
+  }
+  toggleIngForm();
+  await loadIngredients();
+}
+
+async function deleteIngredient(id){
+  if(!confirm('재료를 삭제할까요?'))return;
+  await sb.from('ingredients').delete().eq('id',id);
+  await loadIngredients();
+}
+
+function renderIngredients(){
+  const el=document.getElementById('ingredient-list');
+  const q=(document.getElementById('ing-search')?.value||'').toLowerCase();
+  const list=ingredients.filter(i=>i.name.toLowerCase().includes(q));
+  if(!ingredients.length){el.innerHTML='<div class="empty">📦 등록된 재료가 없어요.<br>재료 추가 버튼을 눌러보세요!</div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty">🔍 검색 결과가 없어요.</div>';return;}
+  el.innerHTML=list.map(i=>{
+    const up=(i.buy_price/i.buy_qty).toFixed(2);
+    const isMine=i.created_by===currentUser.id;
+    return `<div class="ingredient-item">
+      <span class="name">${i.name}</span>
+      <span class="info">${i.buy_qty.toLocaleString()}${i.unit} / ${i.buy_price.toLocaleString()}원
+        <span class="badge badge-blue" style="margin-left:4px">${up}원/${i.unit}</span>
+      </span>
+      <button class="btn btn-sm" onclick="toggleIngForm(${i.id})" style="margin-right:4px">수정</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteIngredient(${i.id})">삭제</button>
+    </div>`;
+  }).join('');
+}
+
+// ── 메뉴 관리 ──
+function setMenuCat(cat){
+  menuCat=cat;
+  document.querySelectorAll('#tab-menus .cat-btn').forEach(b=>b.classList.toggle('active',b.textContent.includes(cat)||(cat==='전체'&&b.textContent==='전체')));
+  renderMenus();
+}
+function setCalcCat(cat){
+  calcCat=cat;
+  document.querySelectorAll('#tab-calculator .cat-btn').forEach(b=>b.classList.toggle('active',b.textContent.includes(cat)||(cat==='전체'&&b.textContent==='전체')));
+  renderCalcMenus();
+}
+
+function openMenuForm(id){
+  editMenuId=id||null;
+  const menu=id?menus.find(m=>m.id===id):null;
+  document.getElementById('menu-form-title').textContent=menu?'메뉴 수정':'새 메뉴 등록';
+  document.getElementById('menu-name').value=menu?menu.name:'';
+  document.getElementById('menu-category').value=menu?.category||'떡';
+  document.getElementById('menu-count').value=menu?.default_count||'';
+  document.getElementById('menu-price').value=menu?.default_price||'';
+  document.getElementById('recipe-rows').innerHTML='';
+  if(menu&&menu.recipe.length) menu.recipe.forEach(r=>addRecipeRow(r));
+  else addRecipeRow();
+  document.getElementById('menu-form').style.display='block';
+  document.getElementById('menu-form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function closeMenuForm(){document.getElementById('menu-form').style.display='none';}
+
+function addRecipeRow(existing){
+  const row=document.createElement('div');row.className='recipe-row';
+  const opts=ingredients.map(i=>`<option value="${i.id}" ${existing&&existing.ingId===i.id?'selected':''}>${i.name} (${i.unit})</option>`).join('');
+  const unit=existing?getIngUnit(existing.ingId):ingredients[0]?.unit||'';
+  row.innerHTML=`
+    <select onchange="updateRowUnit(this)">${opts||'<option>재료를 먼저 등록하세요</option>'}</select>
+    <input type="number" placeholder="분량" min="0" step="any" value="${existing?existing.qty:''}">
+    <span class="unit">${unit}</span>
+    <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('recipe-rows').appendChild(row);
+}
+
+function getIngUnit(id){const i=ingredients.find(x=>x.id==id);return i?i.unit:'';}
+function updateRowUnit(sel){sel.parentElement.querySelector('.unit').textContent=getIngUnit(parseInt(sel.value));}
+
+async function saveMenu(){
+  const name=document.getElementById('menu-name').value.trim();
+  if(!name){alert('메뉴명을 입력해주세요.');return;}
+  const category=document.getElementById('menu-category').value;
+  const default_count=parseFloat(document.getElementById('menu-count').value)||0;
+  const default_price=parseFloat(document.getElementById('menu-price').value)||0;
+  const rows=document.querySelectorAll('#recipe-rows .recipe-row');
+  const recipe=[];
+  rows.forEach(row=>{
+    const ingId=parseInt(row.querySelector('select').value);
+    const qty=parseFloat(row.querySelector('input').value);
+    if(ingId&&!isNaN(qty)&&qty>0) recipe.push({ingId,qty});
+  });
+  if(!recipe.length){alert('재료를 하나 이상 추가해주세요.');return;}
+
+  let menuId=editMenuId;
+  if(editMenuId){
+    await sb.from('menus').update({name,category,default_count,default_price}).eq('id',editMenuId);
+    await sb.from('menu_recipes').delete().eq('menu_id',editMenuId);
+  } else {
+    const {data}=await sb.from('menus').insert({name,category,default_count,default_price,created_by:currentUser.id}).select().single();
+    menuId=data.id;
+  }
+  await sb.from('menu_recipes').insert(recipe.map(r=>({menu_id:menuId,ingredient_id:r.ingId,qty:r.qty})));
+  closeMenuForm();
+  await loadMenus();
+}
+
+async function deleteMenu(id){
+  if(!confirm('메뉴를 삭제할까요?'))return;
+  await sb.from('menus').delete().eq('id',id);
+  await loadMenus();
+}
+
+function menuCost(menu){
+  return (menu.recipe||[]).reduce((s,r)=>{
+    const i=ingredients.find(x=>x.id===r.ingId);
+    return s+(i?(i.buy_price/i.buy_qty)*r.qty:0);
+  },0);
+}
+
+function renderMenus(){
+  const el=document.getElementById('menu-list');
+  const catEmoji={'떡':'🍡','한과':'🍯','퓨전':'✨'};
+  const filtered=menuCat==='전체'?menus:menus.filter(m=>(m.category||'떡')===menuCat);
+  if(!menus.length){el.innerHTML='<div class="empty">📋 등록된 메뉴가 없어요.</div>';return;}
+  if(!filtered.length){el.innerHTML='<div class="empty">이 카테고리에 메뉴가 없어요.</div>';return;}
+  el.innerHTML=filtered.map(m=>{
+    const isMine=m.created_by===currentUser.id;
+    return `<div class="menu-item">
+      <span style="font-weight:600;flex:1">${m.name}</span>
+      <span style="font-size:11px;background:#f0f0ee;color:#888;padding:2px 8px;border-radius:20px;margin-right:6px">${catEmoji[m.category||'떡']} ${m.category||'떡'}</span>
+      ${isMine?'<span class="mine-badge">내 메뉴</span>':'<span class="others-badge">👀 보기만</span>'}
+      <span style="color:#aaa;font-size:12px;margin:0 8px">${Math.round(menuCost(m)).toLocaleString()}원</span>
+      ${isMine?`<button class="btn btn-sm" onclick="openMenuForm(${m.id});event.stopPropagation()">수정</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteMenu(${m.id});event.stopPropagation()" style="margin-left:4px">삭제</button>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ── 원가 계산 ──
+function renderCalcMenus(){
+  const el=document.getElementById('calc-menu-list');
+  const q=(document.getElementById('calc-search')?.value||'').toLowerCase();
+  const catFiltered=calcCat==='전체'?menus:menus.filter(m=>(m.category||'떡')===calcCat);
+  const list=catFiltered.filter(m=>m.name.toLowerCase().includes(q));
+  if(!menus.length){el.innerHTML='<div class="empty">메뉴 관리 탭에서 먼저 메뉴를 등록해주세요.</div>';return;}
+  if(!list.length){el.innerHTML='<div class="empty">🔍 검색 결과가 없어요.</div>';return;}
+  el.innerHTML=list.map(m=>`
+    <div class="menu-item ${selMenuId===m.id?'selected':''}" onclick="selectMenu(${m.id})">
+      <span style="font-weight:600">${m.name}</span>
+      <span style="color:#aaa;font-size:12px">${m.category||'떡'}</span>
+    </div>`).join('');
+}
+
+function selectMenu(id){
+  selMenuId=id;
+  const menu=menus.find(m=>m.id===id);if(!menu)return;
+  document.getElementById('calc-count').value=menu.default_count||'';
+  document.getElementById('calc-price').value=menu.default_price||'';
+  document.getElementById('calc-content').style.display='block';
+  document.getElementById('calc-title').textContent=menu.name;
+  renderCalcSummary(menu);
+  renderCalcMenus();
+}
+
+function renderCalcSummary(menu){
+  let rows='';let total=0;
+  (menu.recipe||[]).forEach(r=>{
+    const i=ingredients.find(x=>x.id===r.ingId);if(!i)return;
+    const cost=(i.buy_price/i.buy_qty)*r.qty;total+=cost;
+    rows+=`<div class="total-row"><span style="color:#888">${i.name}</span><span>${r.qty}${i.unit}</span><span style="font-weight:500">${Math.round(cost).toLocaleString()}원</span></div>`;
+  });
+  document.getElementById('calc-summary').innerHTML=rows+`
+    <div class="total-row bold" style="border-top:1px solid #f0f0ee;padding-top:10px;margin-top:4px">
+      <span>총 원재료비</span><span></span><span class="blue">${Math.round(total).toLocaleString()}원</span>
+    </div>`;
+  recalc();
+}
+
+function recalc(){
+  const menu=menus.find(m=>m.id===selMenuId);if(!menu)return;
+  const total=menuCost(menu);
+  const count=parseFloat(document.getElementById('calc-count').value)||0;
+  const price=parseFloat(document.getElementById('calc-price').value)||0;
+  const perCost=count>0?total/count:0;
+  document.getElementById('calc-stats').innerHTML=`
+    <div class="stat-card"><div class="stat-label">총 원재료비</div><div class="stat-value blue">${Math.round(total).toLocaleString()}원</div></div>
+    <div class="stat-card"><div class="stat-label">생산 개수</div><div class="stat-value">${count>0?count+'개':'—'}</div></div>
+    <div class="stat-card"><div class="stat-label">개당 원가</div><div class="stat-value amber">${count>0?Math.round(perCost).toLocaleString()+'원':'—'}</div></div>`;
+  const sug=document.getElementById('calc-suggest');
+  if(count>0){
+    sug.innerHTML=`<div class="result-block"><div class="result-title">권장 판매가 (원가율별)</div>
+      <div class="grid3">${[20,25,30].map(r=>{
+        const sp=Math.round(perCost/(r/100)),pf=sp-Math.round(perCost);
+        return `<div class="stat-card"><div class="stat-label">원가율 ${r}%</div><div class="stat-value green">${sp.toLocaleString()}원</div><div style="font-size:11px;color:#888;margin-top:2px">순이익 ${pf.toLocaleString()}원</div></div>`;
+      }).join('')}</div></div>`;
+  } else sug.innerHTML='';
+  const act=document.getElementById('calc-actual');
+  if(count>0&&price>0){
+    const cr=((perCost/price)*100).toFixed(1),pf=price-Math.round(perCost);
+    act.style.display='block';
+    act.innerHTML=`<div class="result-block"><div class="result-title">실제 판매가 분석 — ${price.toLocaleString()}원/개</div>
+      <div class="grid2">
+        <div class="stat-card"><div class="stat-label">실제 원가율</div><div class="stat-value ${parseFloat(cr)<=25?'green':'amber'}">${cr}%</div></div>
+        <div class="stat-card"><div class="stat-label">개당 순이익</div><div class="stat-value ${pf>=0?'green':'red'}">${pf>=0?'+':''}${pf.toLocaleString()}원</div></div>
+        <div class="stat-card"><div class="stat-label">총 순이익 (${count}개)</div><div class="stat-value ${pf*count>=0?'green':'red'}">${pf*count>=0?'+':''}${(pf*count).toLocaleString()}원</div></div>
+        <div class="stat-card"><div class="stat-label">총 매출</div><div class="stat-value blue">${(price*count).toLocaleString()}원</div></div>
+      </div></div>`;
+  } else act.style.display='none';
+}
+
+function exportImage(){
+  const menu=menus.find(m=>m.id===selMenuId);if(!menu)return;
+  const total=menuCost(menu);
+  const count=parseFloat(document.getElementById('calc-count').value)||0;
+  const price=parseFloat(document.getElementById('calc-price').value)||0;
+  const perCost=count>0?total/count:0;
+  const rows=(menu.recipe||[]).filter(r=>ingredients.find(i=>i.id===r.ingId));
+  const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+  const pad=28;let y=0;
+  let h=110+rows.length*34+80;
+  if(count>0)h+=170;if(count>0&&price>0)h+=150;
+  cv.width=600;cv.height=h+40;
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,600,cv.height);
+  y=44;ctx.fillStyle='#1a1a1a';ctx.font='700 22px system-ui';ctx.fillText(menu.name,pad,y);
+  y+=24;ctx.font='500 14px system-ui';ctx.fillStyle='#555';ctx.fillText('원가 계산서',pad,y);
+  y+=20;ctx.font='400 12px system-ui';ctx.fillStyle='#aaa';ctx.fillText(new Date().toLocaleDateString('ko-KR'),pad,y);
+  y+=18;ctx.strokeStyle='#e5e5e3';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(572,y);ctx.stroke();
+  y+=24;ctx.font='600 12px system-ui';ctx.fillStyle='#888';
+  ['재료','분량','단가','금액'].forEach((t,i)=>ctx.fillText(t,[pad,220,330,460][i],y));
+  y+=10;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(572,y);ctx.stroke();
+  rows.forEach((r,idx)=>{
+    const ing=ingredients.find(i=>i.id===r.ingId);if(!ing)return;
+    y+=28;ctx.font='400 13px system-ui';ctx.fillStyle='#1a1a1a';
+    ctx.fillText(ing.name,pad,y);ctx.fillText(r.qty+ing.unit,220,y);
+    ctx.fillText((ing.buy_price/ing.buy_qty).toFixed(2)+'원/'+ing.unit,330,y);
+    ctx.fillText(Math.round((ing.buy_price/ing.buy_qty)*r.qty).toLocaleString()+'원',460,y);
+    if(idx<rows.length-1){ctx.strokeStyle='#f5f5f3';ctx.beginPath();ctx.moveTo(pad,y+8);ctx.lineTo(572,y+8);ctx.stroke();}
+  });
+  y+=16;ctx.strokeStyle='#ccc';ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(572,y);ctx.stroke();
+  y+=24;ctx.font='700 14px system-ui';ctx.fillStyle='#185fa5';
+  ctx.fillText('총 원재료비',pad,y);ctx.fillText(Math.round(total).toLocaleString()+'원',460,y);
+  if(count>0){
+    y+=32;ctx.fillStyle='#f9f9f7';ctx.beginPath();ctx.roundRect(pad,y-18,544,150,8);ctx.fill();
+    ctx.font='500 13px system-ui';ctx.fillStyle='#555';
+    ctx.fillText('생산 개수',pad+12,y);ctx.fillText(count+'개',460,y);
+    y+=30;ctx.fillText('개당 원가',pad+12,y);ctx.fillStyle='#854f0b';ctx.fillText(Math.round(perCost).toLocaleString()+'원',460,y);
+    [20,25,30].forEach(r=>{
+      y+=30;ctx.fillStyle='#555';ctx.fillText('권장 판매가 (원가율 '+r+'%)',pad+12,y);
+      const sp=Math.round(perCost/(r/100));
+      ctx.fillStyle='#0f6e56';ctx.fillText(sp.toLocaleString()+'원  순이익 '+(sp-Math.round(perCost)).toLocaleString()+'원',310,y);
+    });
+  }
+  if(count>0&&price>0){
+    y+=32;ctx.fillStyle='#f0f5ff';ctx.beginPath();ctx.roundRect(pad,y-18,544,130,8);ctx.fill();
+    ctx.font='500 13px system-ui';
+    ctx.fillStyle='#555';ctx.fillText('실제 판매가',pad+12,y);ctx.fillStyle='#185fa5';ctx.fillText(price.toLocaleString()+'원/개',460,y);
+    y+=30;const cr=((perCost/price)*100).toFixed(1);
+    ctx.fillStyle='#555';ctx.fillText('원가율',pad+12,y);
+    ctx.fillStyle=parseFloat(cr)<=25?'#0f6e56':'#854f0b';ctx.fillText(cr+'%',460,y);
+    y+=30;const pf=price-Math.round(perCost);
+    ctx.fillStyle='#555';ctx.fillText('개당 순이익',pad+12,y);
+    ctx.fillStyle=pf>=0?'#0f6e56':'#a32d2d';ctx.fillText((pf>=0?'+':'')+pf.toLocaleString()+'원',460,y);
+    y+=30;ctx.fillStyle='#555';ctx.fillText('총 순이익 ('+count+'개)',pad+12,y);
+    const tp=pf*count;ctx.fillStyle=tp>=0?'#0f6e56':'#a32d2d';ctx.fillText((tp>=0?'+':'')+tp.toLocaleString()+'원',460,y);
+  }
+  y+=36;ctx.font='400 11px system-ui';ctx.fillStyle='#ddd';ctx.fillText(new Date().toLocaleString('ko-KR'),pad,y);
+  const a=document.createElement('a');a.download=menu.name+'_원가계산서.png';a.href=cv.toDataURL('image/png');a.click();
+}
+
+// 엑셀 데이터 자동 추가 (무조건 덮어쓰기)
+(function(){
+  var newIngs = [{"id": 1700100000000, "name": "조 청", "unit": "g", "buy_qty": 1250.0, "buy_price": 7000.0}, {"id": 1700100001000, "name": "백설탕", "unit": "g", "buy_qty": 450.0, "buy_price": 7200.0}, {"id": 1700100002000, "name": "버 터", "unit": "g", "buy_qty": 2450.0, "buy_price": 8000.0}, {"id": 1700100003000, "name": "쌀꼬부리", "unit": "g", "buy_qty": 4000.0, "buy_price": 32500.0}, {"id": 1700100004000, "name": "크랜베리", "unit": "g", "buy_qty": 1000.0, "buy_price": 10000.0}, {"id": 1700100005000, "name": "호박씨", "unit": "g", "buy_qty": 1000.0, "buy_price": 7500.0}, {"id": 1700100006000, "name": "봉 투", "unit": "개", "buy_qty": 100.0, "buy_price": 2800.0}, {"id": 1700100007000, "name": "땅콩분태", "unit": "g", "buy_qty": 1000.0, "buy_price": 10000.0}, {"id": 1700100008000, "name": "찹쌀 가루", "unit": "g", "buy_qty": 1000.0, "buy_price": 8000.0}, {"id": 1700100009000, "name": "유자차 건지", "unit": "g", "buy_qty": 1000.0, "buy_price": 25500.0}, {"id": 1700100010000, "name": "흑임자 고물", "unit": "g", "buy_qty": 500.0, "buy_price": 36000.0}, {"id": 1700100011000, "name": "슈가파우더", "unit": "g", "buy_qty": 500.0, "buy_price": 2500.0}, {"id": 1700100012000, "name": "용기", "unit": "개", "buy_qty": 1.0, "buy_price": 250.0}, {"id": 1700100013000, "name": "찐 단호박", "unit": "g", "buy_qty": 1000.0, "buy_price": 6000.0}, {"id": 1700100014000, "name": "카스텔라", "unit": "g", "buy_qty": 1000.0, "buy_price": 14000.0}, {"id": 1700100015000, "name": "삶은 쑥", "unit": "g", "buy_qty": 1000.0, "buy_price": 15000.0}, {"id": 1700100016000, "name": "콩고물", "unit": "g", "buy_qty": 2000.0, "buy_price": 12000.0}, {"id": 1700100017000, "name": "코코아 가루", "unit": "g", "buy_qty": 200.0, "buy_price": 10600.0}, {"id": 1700100018000, "name": "다크 초콜릿", "unit": "g", "buy_qty": 800.0, "buy_price": 23600.0}, {"id": 1700100019000, "name": "올리브", "unit": "g", "buy_qty": 1400.0, "buy_price": 14500.0}, {"id": 1700100020000, "name": "올리고당", "unit": "g", "buy_qty": 2400.0, "buy_price": 7000.0}, {"id": 1700100021000, "name": "설탕", "unit": "g", "buy_qty": 1000.0, "buy_price": 2300.0}, {"id": 1700100022000, "name": "소금", "unit": "g", "buy_qty": 1000.0, "buy_price": 6000.0}, {"id": 1700100023000, "name": "피스타치오", "unit": "g", "buy_qty": 1000.0, "buy_price": 44000.0}, {"id": 1700100024000, "name": "바카디 럼", "unit": "g", "buy_qty": 1000.0, "buy_price": 2300.0}, {"id": 1700100025000, "name": "통아몬드", "unit": "g", "buy_qty": 1000.0, "buy_price": 14000.0}, {"id": 1700100026000, "name": "참 깨", "unit": "g", "buy_qty": 500.0, "buy_price": 27000.0}, {"id": 1700100027000, "name": "조청", "unit": "g", "buy_qty": 3000.0, "buy_price": 14000.0}, {"id": 1700100028000, "name": "꿀", "unit": "g", "buy_qty": 2000.0, "buy_price": 20000.0}, {"id": 1700100029000, "name": "실 깨", "unit": "g", "buy_qty": 1000.0, "buy_price": 14000.0}, {"id": 1700100030000, "name": "레드 와인", "unit": "g", "buy_qty": 700.0, "buy_price": 5000.0}, {"id": 1700100031000, "name": "아몬드 강정", "unit": "g", "buy_qty": 100.0, "buy_price": 1450.0}, {"id": 1700100032000, "name": "검정깨", "unit": "g", "buy_qty": 500.0, "buy_price": 29000.0}, {"id": 1700100033000, "name": "다진호박씨", "unit": "g", "buy_qty": 1000.0, "buy_price": 9000.0}, {"id": 1700100034000, "name": "땅콩 분태", "unit": "g", "buy_qty": 1000.0, "buy_price": 19000.0}, {"id": 1700100035000, "name": "들 깨", "unit": "g", "buy_qty": 500.0, "buy_price": 16000.0}, {"id": 1700100036000, "name": "땅콩 (미국)", "unit": "g", "buy_qty": 1000.0, "buy_price": 9000.0}, {"id": 1700100037000, "name": "곶 감", "unit": "개", "buy_qty": 1.0, "buy_price": 1000.0}, {"id": 1700100038000, "name": "대 추", "unit": "g", "buy_qty": 1000.0, "buy_price": 20000.0}, {"id": 1700100039000, "name": "호두강정", "unit": "g", "buy_qty": 100.0, "buy_price": 10000.0}, {"id": 1700100040000, "name": "유자청 건지", "unit": "g", "buy_qty": 1000.0, "buy_price": 25400.0}, {"id": 1700100041000, "name": "유자청", "unit": "g", "buy_qty": 1000.0, "buy_price": 13000.0}, {"id": 1700100042000, "name": "시나몬가루", "unit": "g", "buy_qty": 300.0, "buy_price": 10500.0}, {"id": 1700100043000, "name": "호 두", "unit": "g", "buy_qty": 1000.0, "buy_price": 13000.0}, {"id": 1700100044000, "name": "고운팥앙금", "unit": "g", "buy_qty": 5000.0, "buy_price": 20500.0}, {"id": 1700100045000, "name": "호두 (10개)", "unit": "g", "buy_qty": 1000.0, "buy_price": 16000.0}, {"id": 1700100046000, "name": "잣 (15개)", "unit": "g", "buy_qty": 1000.0, "buy_price": 150000.0}, {"id": 1700100047000, "name": "설 탕", "unit": "g", "buy_qty": 1000.0, "buy_price": 2300.0}, {"id": 1700100048000, "name": "물 엿", "unit": "g", "buy_qty": 2450.0, "buy_price": 8000.0}, {"id": 1700100049000, "name": "소 금", "unit": "g", "buy_qty": 1000.0, "buy_price": 6000.0}, {"id": 1700100050000, "name": "무염버터", "unit": "g", "buy_qty": 450.0, "buy_price": 7000.0}, {"id": 1700100051000, "name": "춘설앙금", "unit": "g", "buy_qty": 5000.0, "buy_price": 18900.0}, {"id": 1700100052000, "name": "크림치즈", "unit": "g", "buy_qty": 2000.0, "buy_price": 30000.0}, {"id": 1700100053000, "name": "중력분", "unit": "g", "buy_qty": 1000.0, "buy_price": 1800.0}, {"id": 1700100054000, "name": "참기름", "unit": "g", "buy_qty": 275.0, "buy_price": 12500.0}, {"id": 1700100055000, "name": "소 주", "unit": "g", "buy_qty": 360.0, "buy_price": 2000.0}, {"id": 1700100056000, "name": "통계피", "unit": "g", "buy_qty": 250.0, "buy_price": 6000.0}, {"id": 1700100057000, "name": "깐생강", "unit": "g", "buy_qty": 300.0, "buy_price": 6000.0}, {"id": 1700100058000, "name": "케이스", "unit": "개", "buy_qty": 1.0, "buy_price": 100.0}, {"id": 1700100059000, "name": "상자", "unit": "개", "buy_qty": 1.0, "buy_price": 3500.0}, {"id": 1700100060000, "name": "콩가루", "unit": "g", "buy_qty": 500.0, "buy_price": 7000.0}, {"id": 1700100061000, "name": "생강즙", "unit": "g", "buy_qty": 450.0, "buy_price": 23000.0}, {"id": 1700100062000, "name": "찹쌀가루", "unit": "g", "buy_qty": 1000.0, "buy_price": 8000.0}, {"id": 1700100063000, "name": "대추", "unit": "g", "buy_qty": 1000.0, "buy_price": 31000.0}, {"id": 1700100064000, "name": "밤", "unit": "g", "buy_qty": 700.0, "buy_price": 18000.0}, {"id": 1700100065000, "name": "호두분태", "unit": "g", "buy_qty": 1000.0, "buy_price": 17000.0}, {"id": 1700100066000, "name": "흑임자가루", "unit": "g", "buy_qty": 500.0, "buy_price": 36000.0}, {"id": 1700100067000, "name": "떡비닐", "unit": "장", "buy_qty": 1000.0, "buy_price": 7000.0}, {"id": 1700100068000, "name": "호박고지", "unit": "g", "buy_qty": 350.0, "buy_price": 14500.0}, {"id": 1700100069000, "name": "서리태", "unit": "g", "buy_qty": 1000.0, "buy_price": 14500.0}, {"id": 1700100070000, "name": "삼색콩배기", "unit": "g", "buy_qty": 1000.0, "buy_price": 9000.0}, {"id": 1700100071000, "name": "나무상자", "unit": "개", "buy_qty": 1.0, "buy_price": 3500.0}, {"id": 1700100072000, "name": "흑설탕", "unit": "g", "buy_qty": 500.0, "buy_price": 4400.0}, {"id": 1700100073000, "name": "찰흑미가루", "unit": "g", "buy_qty": 1000.0, "buy_price": 10000.0}, {"id": 1700100074000, "name": "반건조무화과", "unit": "g", "buy_qty": 350.0, "buy_price": 6500.0}, {"id": 1700100075000, "name": "피 칸", "unit": "g", "buy_qty": 1000.0, "buy_price": 21000.0}, {"id": 1700100076000, "name": "새 우", "unit": "g", "buy_qty": 2000.0, "buy_price": 31000.0}, {"id": 1700100077000, "name": "미 림", "unit": "g", "buy_qty": 1800.0, "buy_price": 7100.0}, {"id": 1700100078000, "name": "국간장", "unit": "g", "buy_qty": 500.0, "buy_price": 5000.0}, {"id": 1700100079000, "name": "통후추", "unit": "g", "buy_qty": 400.0, "buy_price": 12000.0}, {"id": 1700100080000, "name": "낱개봉투", "unit": "장", "buy_qty": 200.0, "buy_price": 10000.0}, {"id": 1700100081000, "name": "인삼(소) 1채", "unit": "g", "buy_qty": 750.0, "buy_price": 31000.0}, {"id": 1700100082000, "name": "물엿", "unit": "g", "buy_qty": 2450.0, "buy_price": 8000.0}, {"id": 1700100083000, "name": "나무도시락(대)", "unit": "개", "buy_qty": 25.0, "buy_price": 56000.0}, {"id": 1700100084000, "name": "전 복", "unit": "마리", "buy_qty": 13.0, "buy_price": 30000.0}, {"id": 1700100085000, "name": "양조 간장", "unit": "g", "buy_qty": 430.0, "buy_price": 7000.0}, {"id": 1700100086000, "name": "백화수복", "unit": "g", "buy_qty": 1800.0, "buy_price": 12000.0}, {"id": 1700100087000, "name": "마른홍고추", "unit": "g", "buy_qty": 80.0, "buy_price": 4500.0}, {"id": 1700100088000, "name": "다시마", "unit": "g", "buy_qty": 200.0, "buy_price": 5000.0}, {"id": 1700100089000, "name": "건미삼", "unit": "g", "buy_qty": 20.0, "buy_price": 4000.0}, {"id": 1700100090000, "name": "찹 쌀", "unit": "g", "buy_qty": 4000.0, "buy_price": 20800.0}, {"id": 1700100091000, "name": "유기농 설탕", "unit": "g", "buy_qty": 4500.0, "buy_price": 18000.0}, {"id": 1700100092000, "name": "깐 밤", "unit": "g", "buy_qty": 1000.0, "buy_price": 21000.0}, {"id": 1700100093000, "name": "잣", "unit": "g", "buy_qty": 1000.0, "buy_price": 150000.0}, {"id": 1700100094000, "name": "페트컵", "unit": "개", "buy_qty": 180.0, "buy_price": 4000.0}, {"id": 1700100095000, "name": "인 삼", "unit": "g", "buy_qty": 700.0, "buy_price": 31000.0}, {"id": 1700100096000, "name": "비정제원당", "unit": "g", "buy_qty": 500.0, "buy_price": 4400.0}, {"id": 1700100097000, "name": "막걸리", "unit": "g", "buy_qty": 750.0, "buy_price": 2000.0}, {"id": 1700100098000, "name": "생 강", "unit": "g", "buy_qty": 100.0, "buy_price": 2000.0}, {"id": 1700100099000, "name": "모나카", "unit": "개", "buy_qty": 50.0, "buy_price": 15000.0}, {"id": 1700100100000, "name": "생크림", "unit": "g", "buy_qty": 1000.0, "buy_price": 12000.0}, {"id": 1700100101000, "name": "버터", "unit": "g", "buy_qty": 450.0, "buy_price": 7500.0}, {"id": 1700100102000, "name": "아몬드", "unit": "g", "buy_qty": 1000.0, "buy_price": 14000.0}, {"id": 1700100103000, "name": "실링봉투", "unit": "장", "buy_qty": 100.0, "buy_price": 2000.0}, {"id": 1700100104000, "name": "캐슈넛", "unit": "g", "buy_qty": 1000.0, "buy_price": 18000.0}, {"id": 1700100105000, "name": "현미", "unit": "g", "buy_qty": 2000.0, "buy_price": 24500.0}, {"id": 1700100106000, "name": "찜쌀백", "unit": "g", "buy_qty": 2000.0, "buy_price": 23100.0}, {"id": 1700100107000, "name": "멥쌀가루", "unit": "g", "buy_qty": 1000.0, "buy_price": 7000.0}, {"id": 1700100108000, "name": "거피팥 고물", "unit": "g", "buy_qty": 1000.0, "buy_price": 5000.0}, {"id": 1700100109000, "name": "오동나무케이스", "unit": "개", "buy_qty": 1.0, "buy_price": 2600.0}, {"id": 1700100110000, "name": "완두배기", "unit": "g", "buy_qty": 500.0, "buy_price": 3500.0}, {"id": 1700100111000, "name": "팥고물", "unit": "g", "buy_qty": 960.0, "buy_price": 13000.0}, {"id": 1700100112000, "name": "녹두전분", "unit": "g", "buy_qty": 1000.0, "buy_price": 13000.0}, {"id": 1700100113000, "name": "분당", "unit": "g", "buy_qty": 1000.0, "buy_price": 3300.0}, {"id": 1700100114000, "name": "유자퓨레", "unit": "g", "buy_qty": 500.0, "buy_price": 14000.0}, {"id": 1700100115000, "name": "생강청", "unit": "g", "buy_qty": 500.0, "buy_price": 20000.0}, {"id": 1700100116000, "name": "찐 콩가루", "unit": "g", "buy_qty": 300.0, "buy_price": 8500.0}, {"id": 1700100117000, "name": "볶은 콩가루", "unit": "g", "buy_qty": 250.0, "buy_price": 5500.0}, {"id": 1700100118000, "name": "흑임자 가루", "unit": "g", "buy_qty": 500.0, "buy_price": 36000.0}, {"id": 1700100119000, "name": "아몬드 가루", "unit": "g", "buy_qty": 900.0, "buy_price": 18500.0}, {"id": 1700100120000, "name": "오미자", "unit": "g", "buy_qty": 300.0, "buy_price": 19000.0}, {"id": 1700100121000, "name": "승검초 가루", "unit": "g", "buy_qty": 100.0, "buy_price": 3000.0}, {"id": 1700100122000, "name": "황치즈 가루", "unit": "g", "buy_qty": 250.0, "buy_price": 5500.0}, {"id": 1700100123000, "name": "말차 가루", "unit": "g", "buy_qty": 100.0, "buy_price": 21000.0}, {"id": 1700100124000, "name": "서리태 가루", "unit": "g", "buy_qty": 500.0, "buy_price": 18000.0}];
+  var newMenus = [{"id": 1700100500000, "name": "까불이 오란다", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100000000, "qty": 85.0}, {"ingId": 1700100001000, "qty": 30.0}, {"ingId": 1700100002000, "qty": 15.0}, {"ingId": 1700100003000, "qty": 200.0}, {"ingId": 1700100004000, "qty": 50.0}, {"ingId": 1700100005000, "qty": 50.0}, {"ingId": 1700100006000, "qty": 12.0}]}, {"id": 1700100501000, "name": "까불이 오란다", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100000000, "qty": 85.0}, {"ingId": 1700100001000, "qty": 30.0}, {"ingId": 1700100002000, "qty": 15.0}, {"ingId": 1700100003000, "qty": 200.0}, {"ingId": 1700100007000, "qty": 50.0}, {"ingId": 1700100006000, "qty": 12.0}]}, {"id": 1700100502000, "name": "흑임자 인절미", "category": "떡", "default_count": 4.5, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 300.0}, {"ingId": 1700100001000, "qty": 30.0}, {"ingId": 1700100009000, "qty": 20.0}, {"ingId": 1700100010000, "qty": 60.0}, {"ingId": 1700100011000, "qty": 12.0}, {"ingId": 1700100012000, "qty": 4.5}]}, {"id": 1700100503000, "name": "단호박 인절미", "category": "떡", "default_count": 5.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 300.0}, {"ingId": 1700100013000, "qty": 90.0}, {"ingId": 1700100001000, "qty": 30.0}, {"ingId": 1700100014000, "qty": 110.0}, {"ingId": 1700100012000, "qty": 5.0}]}, {"id": 1700100504000, "name": "쑥 인절미", "category": "떡", "default_count": 4.5, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 300.0}, {"ingId": 1700100001000, "qty": 30.0}, {"ingId": 1700100015000, "qty": 90.0}, {"ingId": 1700100016000, "qty": 50.0}, {"ingId": 1700100012000, "qty": 4.5}]}, {"id": 1700100505000, "name": "초코 인절미", "category": "떡", "default_count": 5.5, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 300.0}, {"ingId": 1700100017000, "qty": 3.0}, {"ingId": 1700100018000, "qty": 40.0}, {"ingId": 1700100001000, "qty": 36.0}, {"ingId": 1700100014000, "qty": 110.0}, {"ingId": 1700100012000, "qty": 5.5}]}, {"id": 1700100506000, "name": "올리브 정과", "category": "한과", "default_count": 8.4, "default_price": 0, "recipe": [{"ingId": 1700100019000, "qty": 1400.0}, {"ingId": 1700100020000, "qty": 945.0}, {"ingId": 1700100021000, "qty": 105.0}, {"ingId": 1700100022000, "qty": 7.0}, {"ingId": 1700100023000, "qty": 230.0}, {"ingId": 1700100024000, "qty": 165.0}]}, {"id": 1700100507000, "name": "아몬드 강정", "category": "한과", "default_count": 2.5, "default_price": 0, "recipe": [{"ingId": 1700100025000, "qty": 250.0}, {"ingId": 1700100021000, "qty": 50.0}, {"ingId": 1700100022000, "qty": 1.0}]}, {"id": 1700100508000, "name": "깨엿강정 - 참깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100026000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100509000, "name": "깨엿강정 - 실깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100029000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100510000, "name": "올리브 정과", "category": "한과", "default_count": 10.8, "default_price": 0, "recipe": [{"ingId": 1700100019000, "qty": 1400.0}, {"ingId": 1700100020000, "qty": 1645.0}, {"ingId": 1700100021000, "qty": 105.0}, {"ingId": 1700100022000, "qty": 7.0}, {"ingId": 1700100030000, "qty": 1400.0}, {"ingId": 1700100031000, "qty": 470.0}]}, {"id": 1700100511000, "name": "깨엿강정 - 검정깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100032000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100512000, "name": "깨엿강정 - 검정깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100032000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100513000, "name": "모자이크 깨강정", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100026000, "qty": 50.0}, {"ingId": 1700100032000, "qty": 50.0}, {"ingId": 1700100033000, "qty": 60.0}, {"ingId": 1700100027000, "qty": 67.0}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100021000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.3}]}, {"id": 1700100514000, "name": "모자이크 깨강정", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100029000, "qty": 50.0}, {"ingId": 1700100032000, "qty": 50.0}, {"ingId": 1700100033000, "qty": 60.0}, {"ingId": 1700100027000, "qty": 67.0}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100021000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.5}]}, {"id": 1700100515000, "name": "깨엿강정 - 참깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100026000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100516000, "name": "깨엿강정 - 실깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100029000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100517000, "name": "다진땅콩 / 들깨", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100034000, "qty": 40.0}, {"ingId": 1700100035000, "qty": 30.0}, {"ingId": 1700100027000, "qty": 30.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100021000, "qty": 9.0}, {"ingId": 1700100022000, "qty": 0.1}]}, {"id": 1700100518000, "name": "다진땅콩 / 들깨", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100036000, "qty": 40.0}, {"ingId": 1700100035000, "qty": 30.0}, {"ingId": 1700100027000, "qty": 30.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100021000, "qty": 9.0}, {"ingId": 1700100022000, "qty": 0.1}]}, {"id": 1700100519000, "name": "깨엿강정 - 검정깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100032000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100520000, "name": "깨엿강정 - 검정깨", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100032000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100521000, "name": "곶감 주머니 (호두강정)", "category": "한과", "default_count": 4.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 4.0}, {"ingId": 1700100038000, "qty": 90.0}, {"ingId": 1700100039000, "qty": 55.0}, {"ingId": 1700100040000, "qty": 45.0}, {"ingId": 1700100041000, "qty": 10.0}, {"ingId": 1700100042000, "qty": 1.0}, {"ingId": 1700100028000, "qty": 20.0}]}, {"id": 1700100522000, "name": "곶감 주머니 (춘설)", "category": "한과", "default_count": 4.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 4.0}, {"ingId": 1700100038000, "qty": 65.0}, {"ingId": 1700100043000, "qty": 45.0}, {"ingId": 1700100040000, "qty": 35.0}, {"ingId": 1700100041000, "qty": 10.0}, {"ingId": 1700100042000, "qty": 1.0}, {"ingId": 1700100044000, "qty": 70.0}]}, {"id": 1700100523000, "name": "곶감 말이 1cm (호두)", "category": "한과", "default_count": 9.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 3.0}, {"ingId": 1700100045000, "qty": 25.0}]}, {"id": 1700100524000, "name": "곶감 잣오림 (국산)", "category": "한과", "default_count": 4.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 1.0}, {"ingId": 1700100046000, "qty": 2.5}]}, {"id": 1700100525000, "name": "호두 강정", "category": "한과", "default_count": 0, "default_price": 0, "recipe": [{"ingId": 1700100043000, "qty": 200.0}, {"ingId": 1700100047000, "qty": 130.0}, {"ingId": 1700100048000, "qty": 70.0}, {"ingId": 1700100049000, "qty": 1.0}, {"ingId": 1700100042000, "qty": 1.0}, {"ingId": 1700100050000, "qty": 10.0}]}, {"id": 1700100526000, "name": "곶감 주머니 (춘설)", "category": "한과", "default_count": 4.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 4.0}, {"ingId": 1700100038000, "qty": 50.0}, {"ingId": 1700100043000, "qty": 55.0}, {"ingId": 1700100040000, "qty": 35.0}, {"ingId": 1700100041000, "qty": 10.0}, {"ingId": 1700100042000, "qty": 1.0}, {"ingId": 1700100051000, "qty": 75.0}]}, {"id": 1700100527000, "name": "곶감 말이 1cm (춘설)", "category": "한과", "default_count": 35.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 11.0}, {"ingId": 1700100038000, "qty": 50.0}, {"ingId": 1700100043000, "qty": 55.0}, {"ingId": 1700100040000, "qty": 35.0}, {"ingId": 1700100041000, "qty": 10.0}, {"ingId": 1700100042000, "qty": 1.0}, {"ingId": 1700100051000, "qty": 75.0}]}, {"id": 1700100528000, "name": "곶감 말이 1cm (호두)", "category": "한과", "default_count": 9.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 3.0}, {"ingId": 1700100045000, "qty": 25.0}, {"ingId": 1700100052000, "qty": 45.0}]}, {"id": 1700100529000, "name": "곶감 잣오림 (중국산)", "category": "한과", "default_count": 4.0, "default_price": 0, "recipe": [{"ingId": 1700100037000, "qty": 1.0}, {"ingId": 1700100046000, "qty": 2.5}]}, {"id": 1700100530000, "name": "개성약과", "category": "한과", "default_count": 0, "default_price": 3000, "recipe": [{"ingId": 1700100053000, "qty": 250.0}, {"ingId": 1700100049000, "qty": 2.0}, {"ingId": 1700100054000, "qty": 47.0}, {"ingId": 1700100028000, "qty": 62.0}, {"ingId": 1700100055000, "qty": 50.0}, {"ingId": 1700100000000, "qty": 200.0}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100056000, "qty": 2.0}, {"ingId": 1700100038000, "qty": 2.0}, {"ingId": 1700100057000, "qty": 4.0}, {"ingId": 1700100058000, "qty": 14.0}, {"ingId": 1700100059000, "qty": 1.5}]}, {"id": 1700100531000, "name": "모자이크 깨강정", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100026000, "qty": 50.0}, {"ingId": 1700100032000, "qty": 50.0}, {"ingId": 1700100033000, "qty": 60.0}, {"ingId": 1700100027000, "qty": 67.0}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100021000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.3}]}, {"id": 1700100532000, "name": "다진땅콩 / 들깨", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100034000, "qty": 40.0}, {"ingId": 1700100035000, "qty": 30.0}, {"ingId": 1700100027000, "qty": 30.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100021000, "qty": 9.0}, {"ingId": 1700100022000, "qty": 0.1}]}, {"id": 1700100533000, "name": "다식 엿강정", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100026000, "qty": 90.0}, {"ingId": 1700100060000, "qty": 35.0}, {"ingId": 1700100028000, "qty": 30.0}, {"ingId": 1700100027000, "qty": 48.0}, {"ingId": 1700100028000, "qty": 15.0}, {"ingId": 1700100021000, "qty": 13.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100534000, "name": "깨엿강정 - 참깨", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100026000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100535000, "name": "깨엿강정 - 검정깨", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100032000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100536000, "name": "깨엿강정 - 들깨", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100035000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100537000, "name": "모자이크 깨강정", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100029000, "qty": 50.0}, {"ingId": 1700100032000, "qty": 50.0}, {"ingId": 1700100033000, "qty": 60.0}, {"ingId": 1700100027000, "qty": 67.0}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100021000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.5}]}, {"id": 1700100538000, "name": "다진땅콩 / 들깨", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100036000, "qty": 40.0}, {"ingId": 1700100035000, "qty": 30.0}, {"ingId": 1700100027000, "qty": 30.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100021000, "qty": 9.0}, {"ingId": 1700100022000, "qty": 0.1}]}, {"id": 1700100539000, "name": "다식 엿강정", "category": "한과", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100029000, "qty": 90.0}, {"ingId": 1700100060000, "qty": 35.0}, {"ingId": 1700100028000, "qty": 30.0}, {"ingId": 1700100027000, "qty": 48.0}, {"ingId": 1700100028000, "qty": 15.0}, {"ingId": 1700100021000, "qty": 13.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100540000, "name": "깨엿강정 - 실깨", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100029000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100541000, "name": "깨엿강정 - 검정깨", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100032000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100542000, "name": "깨엿강정 - 들깨", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100035000, "qty": 250.0}, {"ingId": 1700100027000, "qty": 69.0}, {"ingId": 1700100028000, "qty": 66.0}, {"ingId": 1700100022000, "qty": 0.2}]}, {"id": 1700100543000, "name": "개성약과", "category": "한과", "default_count": 0, "default_price": 3000, "recipe": [{"ingId": 1700100053000, "qty": 1000.0}, {"ingId": 1700100049000, "qty": 5.0}, {"ingId": 1700100054000, "qty": 190.0}, {"ingId": 1700100028000, "qty": 212.0}, {"ingId": 1700100055000, "qty": 170.0}, {"ingId": 1700100000000, "qty": 600.0}, {"ingId": 1700100028000, "qty": 100.0}, {"ingId": 1700100056000, "qty": 6.0}, {"ingId": 1700100038000, "qty": 10.0}, {"ingId": 1700100061000, "qty": 35.0}, {"ingId": 1700100058000, "qty": 57.0}, {"ingId": 1700100059000, "qty": 6.0}]}, {"id": 1700100544000, "name": "구름떡", "category": "떡", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 350.0}, {"ingId": 1700100001000, "qty": 42.0}, {"ingId": 1700100063000, "qty": 16.0}, {"ingId": 1700100064000, "qty": 70.0}, {"ingId": 1700100065000, "qty": 20.0}, {"ingId": 1700100005000, "qty": 20.0}, {"ingId": 1700100066000, "qty": 30.0}, {"ingId": 1700100067000, "qty": 15.0}]}, {"id": 1700100545000, "name": "쇠머리떡", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 500.0}, {"ingId": 1700100001000, "qty": 50.0}, {"ingId": 1700100064000, "qty": 70.0}, {"ingId": 1700100038000, "qty": 20.0}, {"ingId": 1700100068000, "qty": 25.0}, {"ingId": 1700100001000, "qty": 10.0}, {"ingId": 1700100069000, "qty": 40.0}, {"ingId": 1700100070000, "qty": 40.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100546000, "name": "호두찰편", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 500.0}, {"ingId": 1700100001000, "qty": 50.0}, {"ingId": 1700100065000, "qty": 80.0}, {"ingId": 1700100072000, "qty": 55.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100547000, "name": "무화과 흑미찰편", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 300.0}, {"ingId": 1700100073000, "qty": 200.0}, {"ingId": 1700100001000, "qty": 50.0}, {"ingId": 1700100074000, "qty": 65.0}, {"ingId": 1700100001000, "qty": 20.0}, {"ingId": 1700100064000, "qty": 70.0}, {"ingId": 1700100075000, "qty": 30.0}, {"ingId": 1700100005000, "qty": 25.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100548000, "name": "새 우 포", "category": "퓨전", "default_count": 70.0, "default_price": 0, "recipe": [{"ingId": 1700100076000, "qty": 2000.0}, {"ingId": 1700100077000, "qty": 530.0}, {"ingId": 1700100078000, "qty": 30.0}, {"ingId": 1700100021000, "qty": 50.0}, {"ingId": 1700100022000, "qty": 20.0}, {"ingId": 1700100079000, "qty": 5.0}, {"ingId": 1700100077000, "qty": 1500.0}, {"ingId": 1700100080000, "qty": 65.0}]}, {"id": 1700100549000, "name": "인삼 편정과", "category": "한과", "default_count": 0, "default_price": 0, "recipe": [{"ingId": 1700100081000, "qty": 750.0}, {"ingId": 1700100082000, "qty": 1000.0}, {"ingId": 1700100001000, "qty": 100.0}, {"ingId": 1700100022000, "qty": 3.0}, {"ingId": 1700100028000, "qty": 120.0}]}, {"id": 1700100550000, "name": "단호박 인절미", "category": "한과", "default_count": 7.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100013000, "qty": 90.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100551000, "name": "초코 인절미", "category": "한과", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100017000, "qty": 4.5}, {"ingId": 1700100018000, "qty": 60.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100552000, "name": "초코 인절미", "category": "한과", "default_count": 7.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100017000, "qty": 4.5}, {"ingId": 1700100018000, "qty": 60.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100553000, "name": "단호박 인절미", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100013000, "qty": 90.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100554000, "name": "단호박 인절미", "category": "떡", "default_count": 7.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100013000, "qty": 90.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100555000, "name": "초코 인절미", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100017000, "qty": 4.5}, {"ingId": 1700100018000, "qty": 60.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100556000, "name": "초코 인절미", "category": "떡", "default_count": 7.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100017000, "qty": 4.5}, {"ingId": 1700100018000, "qty": 60.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100557000, "name": "전 복 포", "category": "퓨전", "default_count": 13.0, "default_price": 0, "recipe": [{"ingId": 1700100084000, "qty": 13.0}, {"ingId": 1700100085000, "qty": 220.0}, {"ingId": 1700100028000, "qty": 250.0}, {"ingId": 1700100086000, "qty": 190.0}, {"ingId": 1700100087000, "qty": 10.0}, {"ingId": 1700100088000, "qty": 3.0}, {"ingId": 1700100089000, "qty": 10.0}, {"ingId": 1700100080000, "qty": 14.0}]}, {"id": 1700100558000, "name": "전 복 포", "category": "퓨전", "default_count": 10.0, "default_price": 0, "recipe": [{"ingId": 1700100084000, "qty": 10.0}, {"ingId": 1700100085000, "qty": 220.0}, {"ingId": 1700100028000, "qty": 250.0}, {"ingId": 1700100086000, "qty": 190.0}, {"ingId": 1700100087000, "qty": 10.0}, {"ingId": 1700100088000, "qty": 3.0}, {"ingId": 1700100089000, "qty": 10.0}, {"ingId": 1700100080000, "qty": 14.0}]}, {"id": 1700100559000, "name": "전 복 포", "category": "퓨전", "default_count": 18.0, "default_price": 0, "recipe": [{"ingId": 1700100084000, "qty": 18.0}, {"ingId": 1700100085000, "qty": 220.0}, {"ingId": 1700100028000, "qty": 250.0}, {"ingId": 1700100086000, "qty": 190.0}, {"ingId": 1700100087000, "qty": 10.0}, {"ingId": 1700100088000, "qty": 3.0}, {"ingId": 1700100089000, "qty": 10.0}, {"ingId": 1700100080000, "qty": 14.0}]}, {"id": 1700100560000, "name": "전 복 포", "category": "퓨전", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100084000, "qty": 20.0}, {"ingId": 1700100085000, "qty": 220.0}, {"ingId": 1700100028000, "qty": 250.0}, {"ingId": 1700100086000, "qty": 190.0}, {"ingId": 1700100087000, "qty": 10.0}, {"ingId": 1700100088000, "qty": 3.0}, {"ingId": 1700100089000, "qty": 10.0}, {"ingId": 1700100080000, "qty": 14.0}]}, {"id": 1700100561000, "name": "유자 약식", "category": "떡", "default_count": 35.0, "default_price": 0, "recipe": [{"ingId": 1700100090000, "qty": 720.0}, {"ingId": 1700100022000, "qty": 10.0}, {"ingId": 1700100091000, "qty": 85.0}, {"ingId": 1700100028000, "qty": 60.0}, {"ingId": 1700100041000, "qty": 150.0}, {"ingId": 1700100092000, "qty": 250.0}, {"ingId": 1700100038000, "qty": 42.0}, {"ingId": 1700100005000, "qty": 50.0}, {"ingId": 1700100093000, "qty": 10.0}, {"ingId": 1700100094000, "qty": 35.0}]}, {"id": 1700100562000, "name": "인삼 약식", "category": "떡", "default_count": 36.0, "default_price": 0, "recipe": [{"ingId": 1700100090000, "qty": 720.0}, {"ingId": 1700100022000, "qty": 10.0}, {"ingId": 1700100091000, "qty": 210.0}, {"ingId": 1700100028000, "qty": 40.0}, {"ingId": 1700100054000, "qty": 50.0}, {"ingId": 1700100092000, "qty": 250.0}, {"ingId": 1700100038000, "qty": 42.0}, {"ingId": 1700100095000, "qty": 150.0}, {"ingId": 1700100093000, "qty": 10.0}, {"ingId": 1700100094000, "qty": 36.0}]}, {"id": 1700100563000, "name": "대추고 약식", "category": "떡", "default_count": 35.0, "default_price": 0, "recipe": [{"ingId": 1700100090000, "qty": 720.0}, {"ingId": 1700100022000, "qty": 10.0}, {"ingId": 1700100091000, "qty": 85.0}, {"ingId": 1700100096000, "qty": 60.0}, {"ingId": 1700100028000, "qty": 40.0}, {"ingId": 1700100054000, "qty": 60.0}, {"ingId": 1700100092000, "qty": 250.0}, {"ingId": 1700100038000, "qty": 42.0}, {"ingId": 1700100093000, "qty": 10.0}, {"ingId": 1700100094000, "qty": 35.0}]}, {"id": 1700100564000, "name": "개성주악", "category": "한과", "default_count": 16.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 65.0}, {"ingId": 1700100053000, "qty": 40.0}, {"ingId": 1700100047000, "qty": 8.0}, {"ingId": 1700100097000, "qty": 14.0}, {"ingId": 1700100000000, "qty": 250.0}, {"ingId": 1700100028000, "qty": 50.0}, {"ingId": 1700100056000, "qty": 10.0}, {"ingId": 1700100038000, "qty": 5.0}, {"ingId": 1700100098000, "qty": 10.0}, {"ingId": 1700100094000, "qty": 16.0}]}, {"id": 1700100565000, "name": "모나카 견과칩", "category": "퓨전", "default_count": 9.0, "default_price": 0, "recipe": [{"ingId": 1700100099000, "qty": 9.0}, {"ingId": 1700100100000, "qty": 17.0}, {"ingId": 1700100001000, "qty": 10.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100101000, "qty": 13.0}, {"ingId": 1700100022000, "qty": 0.5}, {"ingId": 1700100102000, "qty": 45.0}, {"ingId": 1700100032000, "qty": 5.0}, {"ingId": 1700100103000, "qty": 9.0}]}, {"id": 1700100566000, "name": "모나카 견과칩", "category": "퓨전", "default_count": 9.0, "default_price": 0, "recipe": [{"ingId": 1700100099000, "qty": 9.0}, {"ingId": 1700100100000, "qty": 17.0}, {"ingId": 1700100001000, "qty": 10.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100101000, "qty": 13.0}, {"ingId": 1700100022000, "qty": 0.5}, {"ingId": 1700100102000, "qty": 33.0}, {"ingId": 1700100005000, "qty": 20.0}, {"ingId": 1700100103000, "qty": 9.0}]}, {"id": 1700100567000, "name": "모나카 견과칩", "category": "퓨전", "default_count": 9.0, "default_price": 0, "recipe": [{"ingId": 1700100099000, "qty": 9.0}, {"ingId": 1700100100000, "qty": 17.0}, {"ingId": 1700100001000, "qty": 10.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100101000, "qty": 13.0}, {"ingId": 1700100022000, "qty": 0.5}, {"ingId": 1700100102000, "qty": 33.0}, {"ingId": 1700100104000, "qty": 20.0}, {"ingId": 1700100103000, "qty": 9.0}]}, {"id": 1700100568000, "name": "모나카 견과칩", "category": "퓨전", "default_count": 9.0, "default_price": 0, "recipe": [{"ingId": 1700100099000, "qty": 9.0}, {"ingId": 1700100100000, "qty": 17.0}, {"ingId": 1700100001000, "qty": 10.0}, {"ingId": 1700100028000, "qty": 10.0}, {"ingId": 1700100101000, "qty": 13.0}, {"ingId": 1700100022000, "qty": 0.5}, {"ingId": 1700100102000, "qty": 11.0}, {"ingId": 1700100105000, "qty": 22.0}, {"ingId": 1700100004000, "qty": 10.0}, {"ingId": 1700100103000, "qty": 9.0}]}, {"id": 1700100569000, "name": "과일 쌀강정 (강정틀 1판)", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100106000, "qty": 145.0}, {"ingId": 1700100000000, "qty": 80.0}, {"ingId": 1700100001000, "qty": 27.0}, {"ingId": 1700100028000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.6}, {"ingId": 1700100103000, "qty": 20.0}]}, {"id": 1700100570000, "name": "과일 쌀강정 ( 지름 6 x 2h )", "category": "한과", "default_count": 16.0, "default_price": 0, "recipe": [{"ingId": 1700100106000, "qty": 145.0}, {"ingId": 1700100000000, "qty": 80.0}, {"ingId": 1700100001000, "qty": 27.0}, {"ingId": 1700100028000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.6}, {"ingId": 1700100103000, "qty": 16.0}]}, {"id": 1700100571000, "name": "과일 쌀강정 ( 지름 7 x 2h )", "category": "한과", "default_count": 12.0, "default_price": 0, "recipe": [{"ingId": 1700100106000, "qty": 145.0}, {"ingId": 1700100000000, "qty": 80.0}, {"ingId": 1700100001000, "qty": 27.0}, {"ingId": 1700100028000, "qty": 19.0}, {"ingId": 1700100022000, "qty": 0.6}, {"ingId": 1700100103000, "qty": 12.0}]}, {"id": 1700100572000, "name": "증 편 (30개)", "category": "떡", "default_count": 30.0, "default_price": 0, "recipe": [{"ingId": 1700100107000, "qty": 450.0}, {"ingId": 1700100097000, "qty": 150.0}, {"ingId": 1700100021000, "qty": 80.0}, {"ingId": 1700100094000, "qty": 30.0}]}, {"id": 1700100573000, "name": "증 편 (10개 - 3상자)", "category": "떡", "default_count": 3.0, "default_price": 0, "recipe": [{"ingId": 1700100107000, "qty": 450.0}, {"ingId": 1700100097000, "qty": 150.0}, {"ingId": 1700100021000, "qty": 80.0}, {"ingId": 1700100094000, "qty": 30.0}, {"ingId": 1700100071000, "qty": 3.0}]}, {"id": 1700100574000, "name": "단호박 인절미", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100013000, "qty": 90.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100575000, "name": "이북 인절미 (10개)", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 133.0}, {"ingId": 1700100001000, "qty": 13.3}, {"ingId": 1700100108000, "qty": 133.0}, {"ingId": 1700100001000, "qty": 13.3}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100109000, "qty": 1.0}]}, {"id": 1700100576000, "name": "이북 인절미 (11개)", "category": "떡", "default_count": 11.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 150.0}, {"ingId": 1700100001000, "qty": 15.0}, {"ingId": 1700100108000, "qty": 140.0}, {"ingId": 1700100001000, "qty": 14.0}, {"ingId": 1700100028000, "qty": 20.0}]}, {"id": 1700100577000, "name": "초코 인절미", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 450.0}, {"ingId": 1700100017000, "qty": 4.5}, {"ingId": 1700100018000, "qty": 60.0}, {"ingId": 1700100001000, "qty": 45.0}, {"ingId": 1700100014000, "qty": 150.0}, {"ingId": 1700100083000, "qty": 1.0}]}, {"id": 1700100578000, "name": "이북 인절미 (고물 구매 / 10개)", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 133.0}, {"ingId": 1700100001000, "qty": 13.3}, {"ingId": 1700100108000, "qty": 133.0}, {"ingId": 1700100001000, "qty": 13.3}, {"ingId": 1700100028000, "qty": 20.0}, {"ingId": 1700100109000, "qty": 1.0}]}, {"id": 1700100579000, "name": "이북 인절미 (고물 구매 / 10개)", "category": "떡", "default_count": 11.0, "default_price": 0, "recipe": [{"ingId": 1700100008000, "qty": 150.0}, {"ingId": 1700100001000, "qty": 15.0}, {"ingId": 1700100108000, "qty": 140.0}, {"ingId": 1700100001000, "qty": 14.0}, {"ingId": 1700100028000, "qty": 20.0}]}, {"id": 1700100580000, "name": "새 우 포", "category": "퓨전", "default_count": 70.0, "default_price": 0, "recipe": [{"ingId": 1700100076000, "qty": 2000.0}, {"ingId": 1700100077000, "qty": 530.0}, {"ingId": 1700100078000, "qty": 30.0}, {"ingId": 1700100021000, "qty": 50.0}, {"ingId": 1700100022000, "qty": 20.0}, {"ingId": 1700100079000, "qty": 5.0}, {"ingId": 1700100077000, "qty": 1500.0}, {"ingId": 1700100080000, "qty": 65.0}]}, {"id": 1700100581000, "name": "완두배기 팥시루떡", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 400.0}, {"ingId": 1700100001000, "qty": 40.0}, {"ingId": 1700100110000, "qty": 80.0}, {"ingId": 1700100111000, "qty": 200.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100582000, "name": "쇠머리떡", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 500.0}, {"ingId": 1700100001000, "qty": 50.0}, {"ingId": 1700100064000, "qty": 70.0}, {"ingId": 1700100038000, "qty": 20.0}, {"ingId": 1700100068000, "qty": 25.0}, {"ingId": 1700100001000, "qty": 10.0}, {"ingId": 1700100069000, "qty": 40.0}, {"ingId": 1700100070000, "qty": 40.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100583000, "name": "호두찰편", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 500.0}, {"ingId": 1700100001000, "qty": 50.0}, {"ingId": 1700100065000, "qty": 80.0}, {"ingId": 1700100072000, "qty": 55.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100584000, "name": "무화과 흑미찰편", "category": "떡", "default_count": 1.0, "default_price": 0, "recipe": [{"ingId": 1700100062000, "qty": 300.0}, {"ingId": 1700100073000, "qty": 200.0}, {"ingId": 1700100001000, "qty": 50.0}, {"ingId": 1700100074000, "qty": 65.0}, {"ingId": 1700100001000, "qty": 20.0}, {"ingId": 1700100064000, "qty": 70.0}, {"ingId": 1700100075000, "qty": 30.0}, {"ingId": 1700100005000, "qty": 25.0}, {"ingId": 1700100067000, "qty": 12.0}, {"ingId": 1700100071000, "qty": 1.0}]}, {"id": 1700100585000, "name": "유자 다식", "category": "한과", "default_count": 19.0, "default_price": 2000, "recipe": [{"ingId": 1700100112000, "qty": 65.0}, {"ingId": 1700100113000, "qty": 40.0}, {"ingId": 1700100114000, "qty": 8.0}, {"ingId": 1700100028000, "qty": 14.0}]}, {"id": 1700100586000, "name": "시나몬 & 생강 다식", "category": "한과", "default_count": 20.0, "default_price": 2000, "recipe": [{"ingId": 1700100112000, "qty": 65.0}, {"ingId": 1700100113000, "qty": 40.0}, {"ingId": 1700100042000, "qty": 1.0}, {"ingId": 1700100115000, "qty": 10.0}, {"ingId": 1700100028000, "qty": 20.0}]}, {"id": 1700100587000, "name": "인절미 다식", "category": "한과", "default_count": 22.0, "default_price": 2000, "recipe": [{"ingId": 1700100116000, "qty": 60.0}, {"ingId": 1700100117000, "qty": 40.0}, {"ingId": 1700100028000, "qty": 70.0}]}, {"id": 1700100588000, "name": "초코 다식", "category": "한과", "default_count": 21.0, "default_price": 2000, "recipe": [{"ingId": 1700100116000, "qty": 70.0}, {"ingId": 1700100017000, "qty": 30.0}, {"ingId": 1700100028000, "qty": 60.0}]}, {"id": 1700100589000, "name": "흑임자 다식", "category": "한과", "default_count": 20.0, "default_price": 2000, "recipe": [{"ingId": 1700100118000, "qty": 100.0}, {"ingId": 1700100028000, "qty": 55.0}]}, {"id": 1700100590000, "name": "아몬드 다식", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100119000, "qty": 100.0}, {"ingId": 1700100028000, "qty": 30.0}]}, {"id": 1700100591000, "name": "오미자 다식", "category": "한과", "default_count": 19.0, "default_price": 2000, "recipe": [{"ingId": 1700100112000, "qty": 65.0}, {"ingId": 1700100113000, "qty": 40.0}, {"ingId": 1700100120000, "qty": 8.0}, {"ingId": 1700100028000, "qty": 14.0}]}, {"id": 1700100592000, "name": "승검초 다식", "category": "한과", "default_count": 19.0, "default_price": 2000, "recipe": [{"ingId": 1700100112000, "qty": 65.0}, {"ingId": 1700100113000, "qty": 40.0}, {"ingId": 1700100121000, "qty": 1.0}, {"ingId": 1700100028000, "qty": 14.0}]}, {"id": 1700100593000, "name": "치즈 다식", "category": "한과", "default_count": 20.0, "default_price": 2000, "recipe": [{"ingId": 1700100116000, "qty": 50.0}, {"ingId": 1700100122000, "qty": 50.0}, {"ingId": 1700100028000, "qty": 50.0}]}, {"id": 1700100594000, "name": "말차 다식", "category": "한과", "default_count": 20.0, "default_price": 2000, "recipe": [{"ingId": 1700100116000, "qty": 95.0}, {"ingId": 1700100123000, "qty": 5.0}, {"ingId": 1700100028000, "qty": 60.0}]}, {"id": 1700100595000, "name": "서리태 다식", "category": "한과", "default_count": 21.0, "default_price": 0, "recipe": [{"ingId": 1700100124000, "qty": 100.0}, {"ingId": 1700100028000, "qty": 65.0}]}, {"id": 1700100596000, "name": "피스타치오", "category": "한과", "default_count": 20.0, "default_price": 0, "recipe": [{"ingId": 1700100119000, "qty": 40.0}, {"ingId": 1700100023000, "qty": 60.0}, {"ingId": 1700100028000, "qty": 32.0}]}];
+  var existIngs = JSON.parse(localStorage.getItem('원가_재료')||'[]');
+  var existMenus = JSON.parse(localStorage.getItem('원가_메뉴')||'[]');
+
+  newIngs.forEach(function(ni){
+    var idx = existIngs.findIndex(function(e){return e.name===ni.name;});
+    var obj = {id:ni.id,name:ni.name,unit:ni.unit,buyQty:ni.buy_qty,buyPrice:ni.buy_price};
+    if(idx>=0) existIngs[idx]=obj;
+    else existIngs.push(obj);
+  });
+
+  newMenus.forEach(function(nm){
+    var idx = existMenus.findIndex(function(e){return e.name===nm.name;});
+    var obj = {id:nm.id,name:nm.name,category:nm.category,defaultCount:nm.default_count,defaultPrice:nm.default_price,recipe:nm.recipe};
+    if(idx>=0) existMenus[idx]=obj;
+    else existMenus.push(obj);
+  });
+
+  localStorage.setItem('원가_재료', JSON.stringify(existIngs));
+  localStorage.setItem('원가_메뉴', JSON.stringify(existMenus));
+  console.log('완료: 재료 '+existIngs.length+'개, 메뉴 '+existMenus.length+'개');
+})();
+
+</script>
+</body>
+</html>
