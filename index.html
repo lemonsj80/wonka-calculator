@@ -61,7 +61,7 @@ input:focus,select:focus{border-color:#1a1a1a}
 .result-title{font-size:12px;color:#888;margin-bottom:10px;font-weight:600;letter-spacing:.5px}
 .grid3{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}@media(min-width:500px){.grid3{grid-template-columns:repeat(4,1fr)}}
 .grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.grid-auto{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.grid-auto{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
 .mine-badge{font-size:10px;background:#e6f1fb;color:#185fa5;padding:2px 6px;border-radius:10px;font-weight:600}
 .others-badge{font-size:10px;background:#f0f0ee;color:#888;padding:2px 6px;border-radius:10px}
 .lock-icon{font-size:11px;color:#bbb}
@@ -899,8 +899,9 @@ function renderCalcSummary(menu){
     rows+=`<div class="total-row"><span style="color:#888">${i.name}</span><span>${r.qty}${i.unit}</span><span style="font-weight:500">${Math.round(cost).toLocaleString()}원</span></div>`;
   });
   document.getElementById('calc-summary').innerHTML=rows+`
-    <div class="total-row bold" style="border-top:1px solid #f0f0ee;padding-top:10px;margin-top:4px">
-      <span>총 원재료비</span><span></span><span class="blue">${Math.round(total).toLocaleString()}원</span>
+    <div style="border-top:1px solid #f0f0ee;padding-top:12px;margin-top:4px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:16px;font-weight:700">총 원재료비</span>
+      <span style="font-size:18px;font-weight:700;color:#185fa5">${Math.round(total).toLocaleString()}원</span>
     </div>`;
   recalc();
 }
@@ -912,7 +913,6 @@ function recalc(){
   const price=parseFloat(document.getElementById('calc-price').dataset.val)||0;
   const perCost=count>0?total/count:0;
   document.getElementById('calc-stats').innerHTML=`
-    <div class="stat-card"><div class="stat-label">총 원재료비</div><div class="stat-value blue">${Math.round(total).toLocaleString()}원</div></div>
     <div class="stat-card"><div class="stat-label">생산 개수</div><div class="stat-value">${count>0?count+'개':'—'}</div></div>
     <div class="stat-card"><div class="stat-label">개당 원가</div><div class="stat-value amber">${count>0?Math.round(perCost).toLocaleString()+'원':'—'}</div></div>`;
   const sug=document.getElementById('calc-suggest');
