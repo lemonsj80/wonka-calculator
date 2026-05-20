@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>원가 계산기</title>
+<title>모락모락x다민채 원가 계산기</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -120,7 +120,7 @@ canvas{display:none}
 <div id="main-app" style="display:none">
   <div class="header">
     <div class="header-left">
-      <h1>🧮 원가 계산기</h1>
+      <h1>🧮 모락모락x다민채 원가 계산기</h1>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <span class="user-badge" id="user-display"></span>
@@ -402,6 +402,7 @@ async function login(){
   const {data,error}=await sb.from('users').select('*').eq('name',name).eq('password',pw).single();
   if(error||!data){showError('login-error','이름 또는 비밀번호가 맞지 않아요.');return;}
   currentUser=data;
+  localStorage.setItem('wonka_user', JSON.stringify(data));
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-app').style.display='block';
   document.getElementById('user-display').textContent='👤 '+currentUser.name;
@@ -424,6 +425,7 @@ async function register(){
 
 function logout(){
   currentUser=null;ingredients=[];menus=[];
+  localStorage.removeItem('wonka_user');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('main-app').style.display='none';
   document.getElementById('login-name').value='';
