@@ -264,32 +264,26 @@ canvas{display:none}
         <button class="cat-btn" onclick="setCalcCat('화과자')">🌸 화과자</button>
         <button class="cat-btn" onclick="setCalcCat('양갱')">🟣 양갱</button>
       </div>
-      <div style="display:flex;gap:16px;align-items:flex-start">
-        <!-- 왼쪽: 메뉴 목록 -->
-        <div style="width:220px;flex-shrink:0">
-          <input id="calc-search" type="text" placeholder="🔍 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee;margin-bottom:8px;font-size:13px">
-          <div id="calc-menu-list" style="max-height:600px;overflow-y:auto"></div>
-        </div>
-        <!-- 오른쪽: 결과 -->
-        <div style="flex:1;min-width:0">
-          <div id="calc-content" style="display:none">
-            <div class="card">
-              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                <div style="font-size:15px;font-weight:700" id="calc-title"></div>
-                <button class="btn btn-sm" onclick="exportImage()">⬇ 이미지 저장</button>
-              </div>
-              <div id="calc-summary"></div>
-              <div class="divider"></div>
-              <div id="calc-count" style="display:none"></div>
-              <div id="calc-price" style="display:none"></div>
-              <div class="grid-auto" id="calc-stats"></div>
-              <div id="calc-suggest"></div>
-              <div id="calc-actual" style="display:none"></div>
+      <div style="margin-bottom:12px">
+        <input id="calc-search" type="text" placeholder="🔍  메뉴 검색..." oninput="renderCalcMenus()" style="background:#f9f9f7;border-color:#eee">
+      </div>
+      <div id="calc-menu-list" style="margin-bottom:12px"></div>
+      <div id="calc-content" style="display:none">
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-sm" onclick="closeCalcContent()">← 목록</button>
+              <div style="font-size:15px;font-weight:700" id="calc-title"></div>
             </div>
+            <button class="btn btn-sm" onclick="exportImage()">⬇ 이미지 저장</button>
           </div>
-          <div id="calc-empty" style="color:#aaa;font-size:14px;text-align:center;padding:60px 0">
-            👈 왼쪽에서 메뉴를 선택해주세요
-          </div>
+          <div id="calc-summary"></div>
+          <div class="divider"></div>
+          <div id="calc-count" style="display:none"></div>
+          <div id="calc-price" style="display:none"></div>
+          <div class="grid-auto" id="calc-stats"></div>
+          <div id="calc-suggest"></div>
+          <div id="calc-actual" style="display:none"></div>
         </div>
       </div>
     </div>
@@ -678,13 +672,22 @@ function renderCalcMenus(){
     </div>`).join('');
 }
 
+function closeCalcContent(){
+  document.getElementById('calc-content').style.display='none';
+  document.getElementById('calc-menu-list').style.display='block';
+  document.getElementById('calc-search').parentElement.style.display='block';
+  selMenuId=null;
+  renderCalcMenus();
+}
+
 function selectMenu(id){
   selMenuId=id;
   const menu=menus.find(m=>m.id===id);if(!menu)return;
   document.getElementById('calc-count').dataset.val=menu.default_count||0;
   document.getElementById('calc-price').dataset.val=menu.default_price||0;
+  document.getElementById('calc-menu-list').style.display='none';
+  document.getElementById('calc-search').parentElement.style.display='none';
   document.getElementById('calc-content').style.display='block';
-  document.getElementById('calc-empty').style.display='none';
   document.getElementById('calc-title').textContent=menu.name;
   renderCalcSummary(menu);
   renderCalcMenus();
