@@ -130,13 +130,13 @@ canvas{display:none}
 
   <div class="container">
     <div class="tabs">
-      <button class="tab active" onclick="showTab('ingredients')">📦 재료 관리</button>
+      <button class="tab active" onclick="showTab('calculator')">💰 원가 계산</button>
       <button class="tab" onclick="showTab('menus')">📋 메뉴 관리</button>
-      <button class="tab" onclick="showTab('calculator')">💰 원가 계산</button>
+      <button class="tab" onclick="showTab('ingredients')">📦 재료 관리</button>
     </div>
 
     <!-- 재료 관리 -->
-    <div id="tab-ingredients" class="panel active">
+    <div id="tab-ingredients" class="panel">
       <div class="section-header">
         <span class="section-title">재료 목록 <span style="font-size:11px;color:#aaa;font-weight:400">(공용)</span></span>
         <button class="btn btn-primary btn-sm" onclick="toggleIngForm()">+ 재료 추가</button>
@@ -273,7 +273,7 @@ canvas{display:none}
     </div>
 
     <!-- 원가 계산 -->
-    <div id="tab-calculator" class="panel">
+    <div id="tab-calculator" class="panel active">
       <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
         <button class="cat-btn active" onclick="setCalcCat('전체')">전체</button>
         <button class="cat-btn" onclick="setCalcCat('떡')">🍡 떡</button>
@@ -449,7 +449,7 @@ async function loadMenus(){
 
 // ── 탭 ──
 function showTab(name){
-  ['ingredients','menus','calculator'].forEach((n,i)=>{
+  ['calculator','menus','ingredients'].forEach((n,i)=>{
     document.querySelectorAll('.tab')[i].classList.toggle('active',n===name);
     document.getElementById('tab-'+n).classList.toggle('active',n===name);
   });
